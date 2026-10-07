@@ -1,0 +1,42 @@
+{
+	"name": "@commercelayer/payments-api-playground",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"check": "biome check .",
+		"check:fix": "pnpm biome check --write",
+		"clean": "pnpm dlx rimraf --glob **/node_modules **/pnpm-lock.yaml",
+		"dep:major": "pnpm dlx npm-check-updates --packageFile '**/package.json' -u",
+		"dep:semver": "pnpm dlx npm-check-updates -t semver --packageFile '**/package.json' -u",
+		"test:e2e": "playwright test"
+	},
+	"dependencies": {
+		"@adyen/adyen-web": "^6.46.0",
+		"@commercelayer/js-auth": "^7",
+		"@commercelayer/sdk": "^8.0.0",
+		"@mollie/api-client": "^4.6.0",
+		"@stripe/react-stripe-js": "^6.12.0",
+		"@stripe/stripe-js": "^9.17.0",
+		"braintree-web": "^3.146.0",
+		"braintree-web-drop-in": "^1.48.0",
+		"next": "^16.3.8",
+		"react": "^19",
+		"react-dom": "^19"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.15",
+		"@playwright/test": "^1.63.0",
+		"@tailwindcss/postcss": "^4",
+		"@types/braintree-web": "^3.143.0",
+		"@types/braintree-web-drop-in": "^1.39.4",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"tailwindcss": "^4",
+		"typescript": "^5"
+	}
+}
