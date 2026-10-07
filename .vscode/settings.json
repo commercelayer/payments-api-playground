@@ -1,0 +1,23 @@
+{
+	"js/ts.tsdk.path": "node_modules/typescript/lib",
+	"biome.enabled": true,
+	"editor.defaultFormatter": "biomejs.biome",
+	// enable auto formatting on json and json with comments
+	"[jsonc]": {
+		"editor.defaultFormatter": "vscode.json-language-features"
+	},
+	"json.format.enable": true,
+	"files.associations": {
+		"*.css": "tailwindcss", // enforce usage of Tailwind extention to lint css files
+		"*.json": "jsonc" // allow comments on json files
+	},
+	// to have stylelint and tailwind intellisense working properly
+	"css.validate": false,
+	"less.validate": false,
+	"scss.validate": false,
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.biome": "explicit",
+		"source.organizeImports.biome": "explicit"
+	}
+}
