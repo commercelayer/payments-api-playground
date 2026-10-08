@@ -11,8 +11,10 @@
  *
  *  1. Gift cards  — applied before choosing a payment method; they reduce the
  *                   remaining balance immediately.  Their payment_sessions are
- *                   authorized right before the method's own authorization
- *                   (or at place-order time when they cover everything).
+ *                   authorized once the method's gateway has accepted the
+ *                   payment, since a gift card is debited the moment it is
+ *                   authorized (or at place-order time when they cover
+ *                   everything).
  *                   Several can be stacked: only the first one on an uncovered
  *                   order lets the API size the session, the rest carry the
  *                   remaining balance explicitly, and each is re-checked after
@@ -803,10 +805,11 @@ export function PaymentSection({
 	/**
 	 * handlePlaceOrder — final placement step.
 	 *
-	 * Gift card sessions are normally authorized just before the chosen
-	 * payment method's authorization (see authorizeAppliedGiftCards). This is
-	 * a safety net for the case where gift cards alone cover the full order
-	 * amount and no method session was ever confirmed.
+	 * Gift card sessions are normally authorized once the chosen payment
+	 * method's gateway has accepted the payment (see authorizeAppliedGiftCards).
+	 * This is a safety net for the flows that leave them to placement: gift
+	 * cards alone covering the full order amount, or a saved card that went
+	 * through a 3-D Secure step.
 	 *
 	 * On failure, any gift cards that were already captured are refunded.
 	 */

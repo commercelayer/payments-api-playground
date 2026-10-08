@@ -80,7 +80,6 @@ export function BraintreePayment({
 		setAuthorizing(true);
 		setAuthorizeError(null);
 		try {
-			await authorizeGiftCards();
 			await client.payment_sessions.update({
 				id: session.id,
 				client_data: { payment_method_id: nonce },
@@ -96,6 +95,14 @@ export function BraintreePayment({
 			}
 			if (auth.status !== "succeeded") {
 				throw new Error("The card was declined. Try another card.");
+			}
+			// Only now: the nonce is just a tokenized card, and Braintree accepts or
+			// declines it inside the authorization CL relays, so this is the first
+			// point where a gift card can be debited safely.
+			try {
+				await authorizeGiftCards();
+			} catch {
+				/* best-effort; placement will surface any real problem */
 			}
 			onAuthorized();
 		} finally {
