@@ -61,10 +61,11 @@ export async function pollAuthorization(
 /**
  * Authorizes any applied gift card sessions that aren't authorized yet.
  *
- * Gift cards are applied before a payment method is chosen, but their
- * payment_authorization must be created before the non-gift-card method's
- * authorization — otherwise a failed method payment could leave a gift
- * card debited with no corresponding order placement.
+ * Gift cards are applied before a payment method is chosen, but authorized
+ * only once the method's gateway has accepted the payment. A gift card
+ * authorization captures in the same step, while a card authorization is a
+ * hold that a void can release: authorizing the gift cards first would leave
+ * them debited whenever the card is then declined.
  */
 export async function authorizeAppliedGiftCards(
 	client: PaymentClient,

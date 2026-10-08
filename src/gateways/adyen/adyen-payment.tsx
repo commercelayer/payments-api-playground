@@ -110,8 +110,8 @@ export function AdyenPayment({
 	}
 
 	/** The advanced-flow card got its session authorized server-side. Gift cards
-	 * are authorized after the card here, unlike the other flows: the card's
-	 * authorization happens inside the server action. */
+	 * are authorized only now: the card's authorization happens inside the
+	 * server action, so this is the first point where Adyen has accepted it. */
 	async function handleAdvancedAuthorized() {
 		try {
 			await authorizeGiftCards();
