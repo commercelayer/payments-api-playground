@@ -16,8 +16,8 @@
 	},
 	"dependencies": {
 		"@adyen/adyen-web": "^6.46.0",
-		"@commercelayer/js-auth": "^7",
-		"@commercelayer/sdk": "^8.0.0",
+		"@commercelayer/js-auth": "^8.0.1",
+		"@commercelayer/sdk": "^8.0.2",
 		"@mollie/api-client": "^4.6.0",
 		"@stripe/react-stripe-js": "^6.12.0",
 		"@stripe/stripe-js": "^9.17.0",
