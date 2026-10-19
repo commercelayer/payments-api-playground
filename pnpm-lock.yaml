@@ -11,6 +11,9 @@ importers:
       '@adyen/adyen-web':
         specifier: ^6.46.0
         version: 6.46.0
+      '@checkout.com/checkout-web-components':
+        specifier: ^1.14.0
+        version: 1.14.0
       '@commercelayer/js-auth':
         specifier: ^7
         version: 7.4.2
@@ -177,6 +180,9 @@ packages:
 
   '@braintree/wrap-promise@2.1.0':
     resolution: {integrity: sha512-UIrJB+AfKU0CCfbMoWrsGpd2D/hBpY/SGgFI6WRHPOwhaZ3g9rz1weiJ6eb6L9KgVyunT7s2tckcPkbHw+NzeA==}
+
+  '@checkout.com/checkout-web-components@1.14.0':
+    resolution: {integrity: sha512-1AgCVNkfcnF8JjG6dzfzC3Z2OIIghREv2LOFxiywUQEQt23uV4D6t1r3rTi5Nzil0qofol1AoDh+TCxXGY3KUQ==}
 
   '@commercelayer/js-auth@7.4.2':
     resolution: {integrity: sha512-ifRcoAL1R7o5AU5w4bgmSnNMEWXDc11A+yZwAAZMEkAYrrsaud1X/3xmgY1e0yIXK8AAdIiqfW/Rm/4DdWwAQA==}
@@ -1164,6 +1170,8 @@ snapshots:
   '@braintree/uuid@2.0.0': {}
 
   '@braintree/wrap-promise@2.1.0': {}
+
+  '@checkout.com/checkout-web-components@1.14.0': {}
 
   '@commercelayer/js-auth@7.4.2': {}
 
