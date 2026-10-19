@@ -20,7 +20,7 @@ function gatewayBadge(type: string | undefined): {
  * One-click "Saved cards" list (scenario 7) — succeeded payment_wallets for the
  * logged-in customer. Each row shows the card, a gateway badge (resolved from the
  * wallet's payment_setting), a Pay button (reuse the stored token), and Remove
- * (delete the CL payment_wallet).
+ * (cancel the CL payment_wallet).
  */
 export function SavedCardsSection({
 	paymentWallets,

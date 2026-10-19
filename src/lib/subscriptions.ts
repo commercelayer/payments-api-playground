@@ -215,7 +215,8 @@ export async function cancelSubscription(
  *
  * Sorted newest first and filtered server-side: the default listing is oldest
  * first over a short page, which hides the card just saved during this very
- * checkout — exactly the one the shopper expects to pick. */
+ * checkout — exactly the one the shopper expects to pick. The status filter
+ * also keeps out the cards the customer removed, which are `canceled`. */
 export async function fetchWallets(client: Client): Promise<PaymentWallet[]> {
 	return client.payment_wallets.list({
 		include: ["payment_setting"],
