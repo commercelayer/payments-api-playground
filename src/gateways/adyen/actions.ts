@@ -89,22 +89,6 @@ export type AdyenAdvancedResult = {
 	error?: string;
 };
 
-/** adyen-web needs a `countryCode` in the advanced-flow config (no session to
- * read it from). Derive it from the order address, server-side. */
-export async function getOrderCountryCode(
-	orderId: string,
-): Promise<string | null> {
-	const client = await getIntegrationClient();
-	const order = await client.orders.retrieve(orderId, {
-		include: ["billing_address", "shipping_address"],
-	});
-	return (
-		order.billing_address?.country_code ??
-		order.shipping_address?.country_code ??
-		null
-	);
-}
-
 /** Create the session (payload in client_data, `vaulting` when the card is to be
  * stored), relay to Adyen /payments via the authorization, and poll to
  * completion. A stored card turns into a CL payment_wallet on its own, from the

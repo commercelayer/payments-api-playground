@@ -39,6 +39,7 @@ export function AdyenPayment({
 	setting,
 	amountCents,
 	currencyCode,
+	billingAddress,
 	customerId,
 	mustSaveCard,
 	session,
@@ -134,6 +135,7 @@ export function AdyenPayment({
 					orderId={orderId}
 					settingId={setting.id}
 					clientKey={clientKey}
+					countryCode={billingAddress?.country_code ?? null}
 					amountCents={advancedAmountCents}
 					currencyCode={currencyCode}
 					customerId={customerId}
