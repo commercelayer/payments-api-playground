@@ -343,7 +343,8 @@ export function PaymentSection({
 			// sort + pageSize matter: the API defaults to 10 per page ordered by `id`
 			// ASC, so page 1 is the *oldest* wallets and anything newly saved lands on
 			// page 2 — invisible here. Filtering the status server-side too, otherwise
-			// non-succeeded wallets eat slots on an already short page.
+			// non-succeeded wallets eat slots on an already short page. The filter is
+			// also what hides the cards the customer removed: those are `canceled`.
 			.list({
 				include: ["payment_setting", "customer"],
 				filters: { status_eq: "succeeded" },
@@ -465,13 +466,15 @@ export function PaymentSection({
 		);
 	}
 
-	// Remove a saved card: deletes the CL payment_wallet record. (The gateway-side
-	// stored method, e.g. on Adyen, must be removed separately.)
+	// Remove a saved card: cancels the CL payment_wallet rather than deleting it.
+	// A wallet that has paid for anything is linked to its payment_sessions and
+	// the API refuses to delete it; cancelling disables it instead, and the
+	// wallet lists only ever ask for `succeeded` ones, so it drops off them.
 	async function handleDeleteWallet(wallet: PaymentWallet) {
 		setDeletingWalletId(wallet.id);
 		setWalletError(null);
 		try {
-			await client.payment_wallets.delete(wallet.id);
+			await client.payment_wallets.update({ id: wallet.id, _cancel: true });
 			setPaymentWallets((prev) => prev.filter((w) => w.id !== wallet.id));
 		} catch (e) {
 			setWalletError(e instanceof Error ? e.message : "Could not remove card.");
