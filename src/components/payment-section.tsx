@@ -25,7 +25,8 @@
  *  3. Saved cards — succeeded payment_wallets of the logged-in customer are
  *                   offered as one-click "Saved cards".  Paying with one is
  *                   gateway-specific (stripe/pay-with-wallet.ts,
- *                   adyen/saved-card-payment.tsx).  Storing a card happens
+ *                   adyen/saved-card-payment.tsx,
+ *                   braintree/pay-with-wallet.ts).  Storing a card happens
  *                   inside each gateway's flow, through the session's
  *                   `vaulting` flag.
  *
@@ -61,6 +62,7 @@ import {
 import { AdyenSavedCardPayment } from "@/gateways/adyen/saved-card-payment";
 import { AdyenThreeDSAction } from "@/gateways/adyen/three-ds-action";
 import { BraintreePayment } from "@/gateways/braintree/braintree-payment";
+import { payWithBraintreeWallet } from "@/gateways/braintree/pay-with-wallet";
 import { ManualPayment } from "@/gateways/manual/manual-payment";
 import { MolliePayment } from "@/gateways/mollie/mollie-payment";
 import {
@@ -459,6 +461,9 @@ export function PaymentSection({
 				setting as PaymentSettingAdyen & { public_key?: string | null },
 			);
 		}
+		if (setting?.type === "payment_setting_braintrees") {
+			return handlePayWithWalletBraintree(wallet, setting);
+		}
 		return handlePayWithWalletStripe(
 			wallet,
 			setting as PaymentSettingStripe | undefined,
@@ -489,6 +494,30 @@ export function PaymentSection({
 		setWalletError(null);
 		try {
 			await payWithStripeWallet({
+				client,
+				orderId,
+				wallet,
+				setting: paymentSetting,
+				amountCents: remainingPaymentAmountCents,
+				authorizeGiftCards,
+			});
+			autoPlaceRef.current = true;
+			onGiftCardApplied(); // silent order refresh
+		} catch (e) {
+			setWalletError(e instanceof Error ? e.message : "Payment failed.");
+		} finally {
+			setPayingWithWalletId(null);
+		}
+	}
+
+	async function handlePayWithWalletBraintree(
+		wallet: PaymentWallet,
+		paymentSetting: PaymentSetting,
+	) {
+		setPayingWithWalletId(wallet.id);
+		setWalletError(null);
+		try {
+			await payWithBraintreeWallet({
 				client,
 				orderId,
 				wallet,
