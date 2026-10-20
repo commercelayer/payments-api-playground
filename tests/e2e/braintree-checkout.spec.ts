@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { fetchGiftCardSessions } from "./integration-api";
 
 /**
  * Braintree card payments: Hosted Fields (or, behind a toggle, the Drop-in)
@@ -73,4 +74,35 @@ test("a declined Braintree card leaves the payment open for a retry", async ({
 	await expect(page.getByTestId("braintree-card-form")).toBeVisible();
 	await expect(page.getByRole("button", { name: "Authorize" })).toBeEnabled();
 	expect(await checkout.remainingAmountCents()).toBe(total);
+});
+
+test("a declined Braintree card leaves the applied gift card undebited", async ({
+	checkout,
+}) => {
+	const { page } = checkout;
+	const code = `E2EB${Date.now().toString(36).toUpperCase()}`;
+
+	// The card pays what the gift card leaves, which still has to sit in the
+	// sandbox's decline band (2000.00–2999.99).
+	await checkout.raiseTotalTo(201_000);
+	await checkout.createGiftCard(code, 10);
+	await checkout.applyGiftCard(code);
+
+	await checkout.selectMethod("payment_setting_braintrees");
+	await checkout.confirm();
+
+	await checkout.fillBraintreeTestCard();
+	await checkout.authorize();
+	await checkout.completeBraintreeChallenge();
+
+	await expect(
+		page.getByText("The card was declined. Try another card."),
+	).toBeVisible({ timeout: 45_000 });
+
+	// A gift card authorization captures at once, so it has to wait for the
+	// card: after a decline the gift card session must hold no authorization.
+	const orderId = new URL(page.url()).pathname.split("/").pop() ?? "";
+	expect(await fetchGiftCardSessions(orderId)).toEqual([
+		{ status: "unpaid", authorization: null },
+	]);
 });
