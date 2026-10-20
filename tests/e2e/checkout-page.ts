@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Frame, type Locator, type Page } from "@playwright/test";
 import { raiseOrderTotalTo } from "./integration-api";
 
 /**
@@ -344,12 +344,13 @@ export class CheckoutPage {
 	}
 
 	/**
-	 * Fill the Stripe Elements card form with a test card that authorizes
-	 * successfully. Types (rather than `fill`s) into each field so Stripe's input
-	 * handlers fire and the field registers as complete — otherwise Authorize can
-	 * fire `confirmPayment` against a still-"incomplete" card.
+	 * Fill the Stripe Elements card form with a test card, by default one that
+	 * authorizes without 3-D Secure. Types (rather than `fill`s) into each field
+	 * so Stripe's input handlers fire and the field registers as complete —
+	 * otherwise Authorize can fire `confirmPayment` against a still-"incomplete"
+	 * card.
 	 */
-	async fillStripeTestCard(): Promise<void> {
+	async fillStripeTestCard(number = "4242424242424242"): Promise<void> {
 		const frame = this.stripeCardFrame();
 		const type = async (name: string, value: string) => {
 			const input = frame.locator(`input[name="${name}"]`);
@@ -357,7 +358,7 @@ export class CheckoutPage {
 			await input.pressSequentially(value, { delay: 20 });
 		};
 
-		await type("number", "4242424242424242");
+		await type("number", number);
 		await type("expiry", "1234");
 		await type("cvc", "123");
 
@@ -366,7 +367,9 @@ export class CheckoutPage {
 		if (await zip.count()) await type("postalCode", "12345");
 
 		// Make sure the card number stuck before authorizing (Stripe formats it).
-		await expect(frame.locator('input[name="number"]')).toHaveValue(/4242/);
+		await expect(frame.locator('input[name="number"]')).toHaveValue(
+			new RegExp(number.slice(-4)),
+		);
 	}
 
 	async authorize(): Promise<void> {
@@ -463,14 +466,13 @@ export class CheckoutPage {
 		await this.fillAdyenCard(this.adyenCardForm());
 	}
 
-	/** Type Adyen's test card into a card form. */
-	private async fillAdyenCard(form: Locator): Promise<void> {
-		await this.fillAdyenField(
-			form,
-			"cardNumber",
-			"Card number",
-			"4988438843884305",
-		);
+	/** Type an Adyen test card into a card form, by default one that authorizes
+	 * without a 3-D Secure challenge. */
+	private async fillAdyenCard(
+		form: Locator,
+		number = "4988438843884305",
+	): Promise<void> {
+		await this.fillAdyenField(form, "cardNumber", "Card number", number);
 		await this.fillAdyenField(form, "expiryDate", "Expiry date", "0330");
 		await this.fillAdyenField(form, "securityCode", "Security code", "737");
 	}
@@ -493,12 +495,18 @@ export class CheckoutPage {
 	 * "save card" checkbox, which is only rendered for a logged-in shopper on a
 	 * one-off order.
 	 */
-	async payWithAdyenAdvancedCard({ save = false } = {}): Promise<void> {
+	async payWithAdyenAdvancedCard({
+		save = false,
+		cardNumber,
+	}: {
+		save?: boolean;
+		cardNumber?: string;
+	} = {}): Promise<void> {
 		const form = this.adyenAdvancedCard();
 		await expect(
 			form.locator(".adyen-checkout__field--cardNumber"),
 		).toBeVisible();
-		await this.fillAdyenCard(form);
+		await this.fillAdyenCard(form, cardNumber);
 		if (save) {
 			// Adyen hides the native input behind a styled label: tick it through
 			// the label and read the state back from the input.
@@ -509,18 +517,31 @@ export class CheckoutPage {
 	}
 
 	/**
-	 * Pay with the most recent card stored with Adyen. The merchant keeps
-	 * Adyen's CVC-required policy for stored cards on, so the CVC is entered
-	 * again before paying.
+	 * A row of the saved cards list, newest first. `last4` narrows it to one
+	 * card, for scenarios that depend on which test card was stored.
 	 */
-	async payWithSavedAdyenCard(): Promise<void> {
-		const row = this.page
+	savedCardRow(gateway: RegExp, last4?: string): Locator {
+		let rows = this.page
 			.locator("li")
-			.filter({ hasText: /adyen/i })
+			.filter({ hasText: gateway })
 			.filter({
 				has: this.page.getByRole("button", { name: "Pay", exact: true }),
-			})
-			.first();
+			});
+		if (last4) rows = rows.filter({ hasText: `•••• ${last4}` });
+		return rows.first();
+	}
+
+	/**
+	 * Pay with the most recent card stored with Adyen, or the most recent one
+	 * ending in `last4`. The merchant keeps Adyen's CVC-required policy for
+	 * stored cards on, so the CVC is entered again before paying.
+	 */
+	async payWithSavedAdyenCard({
+		last4,
+	}: {
+		last4?: string;
+	} = {}): Promise<void> {
+		const row = this.savedCardRow(/adyen/i, last4);
 		await expect(row).toBeVisible({ timeout: 30_000 });
 		await row.getByRole("button", { name: "Pay", exact: true }).click();
 
@@ -640,6 +661,56 @@ export class CheckoutPage {
 			.locator(".adyen-dropin-container")
 			.getByRole("button", { name: /pay/i })
 			.click();
+	}
+
+	/**
+	 * The first visible match of `find` in any frame on the page, with the frame
+	 * it was found in. A 3-D Secure challenge nests the issuer's page a few
+	 * iframes deep, under names that change between runs, so the frames are
+	 * searched instead of addressed by path.
+	 */
+	private async findInFrames(
+		find: (frame: Frame) => Locator,
+		timeout = 30_000,
+	): Promise<{ frame: Frame; locator: Locator }> {
+		const found: { frame?: Frame; locator?: Locator } = {};
+		await expect
+			.poll(
+				async () => {
+					for (const frame of this.page.frames()) {
+						const locator = find(frame).first();
+						if (await locator.isVisible().catch(() => false)) {
+							found.frame = frame;
+							found.locator = locator;
+							return true;
+						}
+					}
+					return false;
+				},
+				{ timeout, intervals: [500] },
+			)
+			.toBe(true);
+		return found as { frame: Frame; locator: Locator };
+	}
+
+	/** Complete the challenge on Stripe's test 3-D Secure page. */
+	async completeStripeChallenge(): Promise<void> {
+		const { locator } = await this.findInFrames((frame) =>
+			frame.getByRole("button", { name: /^complete/i }),
+		);
+		await locator.click();
+	}
+
+	/**
+	 * Complete Adyen's test 3-D Secure 2 challenge. Its web challenge asks for a
+	 * password, which is `password` in the test environment.
+	 */
+	async completeAdyenChallenge(): Promise<void> {
+		const { frame, locator } = await this.findInFrames((frame) =>
+			frame.locator('input[type="password"]'),
+		);
+		await locator.fill("password");
+		await frame.getByRole("button", { name: "OK", exact: true }).click();
 	}
 
 	/**
