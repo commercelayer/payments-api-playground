@@ -53,6 +53,7 @@ function adyenWalletBrand(wallet: PaymentWallet): string {
 export function AdyenSavedCardPayment({
 	client,
 	orderId,
+	countryCode,
 	wallet,
 	setting,
 	amountCents,
@@ -65,6 +66,7 @@ export function AdyenSavedCardPayment({
 }: {
 	client: PaymentClient;
 	orderId: string;
+	countryCode: string | null;
 	wallet: PaymentWallet;
 	setting: PaymentSettingAdyen & { public_key?: string | null };
 	amountCents: number;
@@ -154,7 +156,7 @@ export function AdyenSavedCardPayment({
 				</button>
 			</div>
 			<AdyenWalletCvcStep
-				orderId={orderId}
+				countryCode={countryCode}
 				storedPaymentMethodId={wallet.payment_token}
 				brand={adyenWalletBrand(wallet)}
 				clientKey={clientKey}

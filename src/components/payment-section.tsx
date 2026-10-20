@@ -941,6 +941,7 @@ export function PaymentSection({
 					<AdyenSavedCardPayment
 						client={client}
 						orderId={orderId}
+						countryCode={billingAddress?.country_code ?? null}
 						wallet={adyenSavedCard.wallet}
 						setting={adyenSavedCard.setting}
 						amountCents={remainingPaymentAmountCents}
@@ -963,7 +964,7 @@ export function PaymentSection({
 				{adyenAction && (
 					<AdyenThreeDSAction
 						client={client}
-						orderId={orderId}
+						countryCode={billingAddress?.country_code ?? null}
 						pending={adyenAction}
 						onAuthorized={() => {
 							setAdyenAction(null);

@@ -21,13 +21,13 @@ import {
  */
 export function AdyenThreeDSAction({
 	client,
-	orderId,
+	countryCode,
 	pending,
 	onAuthorized,
 	onError,
 }: {
 	client: PaymentClient;
-	orderId: string;
+	countryCode: string | null;
 	pending: AdyenPendingAction;
 	onAuthorized: () => void;
 	onError: (message: string) => void;
@@ -99,7 +99,7 @@ export function AdyenThreeDSAction({
 			<AdyenActionStep
 				action={current.action}
 				clientKey={current.clientKey}
-				orderId={orderId}
+				countryCode={countryCode}
 				onDetails={handleDetails}
 				onError={onError}
 			/>

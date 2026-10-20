@@ -9,7 +9,6 @@ import type {
 	UIElement,
 } from "@adyen/adyen-web";
 import { useEffect, useRef } from "react";
-import { getOrderCountryCode } from "./actions";
 
 /**
  * Collects a fresh CVC for a stored Adyen card, with NO session (advanced flow).
@@ -30,7 +29,7 @@ import { getOrderCountryCode } from "./actions";
  * once native 3DS is signalled — Adyen 15_002 without it.)
  */
 export function AdyenWalletCvcStep({
-	orderId,
+	countryCode,
 	storedPaymentMethodId,
 	brand,
 	clientKey,
@@ -39,7 +38,7 @@ export function AdyenWalletCvcStep({
 	onSubmit,
 	onError,
 }: {
-	orderId: string;
+	countryCode: string | null;
 	storedPaymentMethodId: string;
 	/** Adyen brand code of the stored card (e.g. "visa", "mc"). Required: a
 	 * single-secured-field (CVC-only) card must declare its brand. */
@@ -86,12 +85,13 @@ export function AdyenWalletCvcStep({
 		}
 
 		(async () => {
-			// Advanced flow has no session to read the shopper country from; adyen-web
-			// throws without a countryCode. Derive it from the order (server-side).
-			const countryCode = await getOrderCountryCode(orderId);
-			if (cancelled || !containerRef.current) return;
+			// adyen-web throws without a countryCode, and with no session there is
+			// nothing to read it from. Any country known for the shopper will do: the
+			// playground passes the order's billing address country.
 			if (!countryCode) {
-				onErrorRef.current("Order has no country code to initialise checkout.");
+				onErrorRef.current(
+					"The order needs a billing address to initialise checkout.",
+				);
 				return;
 			}
 
@@ -136,7 +136,7 @@ export function AdyenWalletCvcStep({
 			component?.unmount();
 		};
 	}, [
-		orderId,
+		countryCode,
 		storedPaymentMethodId,
 		brand,
 		clientKey,

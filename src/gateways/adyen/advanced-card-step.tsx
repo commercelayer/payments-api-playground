@@ -10,11 +10,7 @@ import type {
 	UIElement,
 } from "@adyen/adyen-web";
 import { useEffect, useRef } from "react";
-import {
-	authorizeAdyenAdvanced,
-	getOrderCountryCode,
-	submitAdyenAdvancedDetails,
-} from "./actions";
+import { authorizeAdyenAdvanced, submitAdyenAdvancedDetails } from "./actions";
 
 /**
  * Advanced-flow card entry for checkout — the saveable counterpart to the
@@ -34,6 +30,7 @@ export function AdyenAdvancedCardStep({
 	orderId,
 	settingId,
 	clientKey,
+	countryCode,
 	amountCents,
 	currencyCode,
 	customerId,
@@ -44,6 +41,7 @@ export function AdyenAdvancedCardStep({
 	orderId: string;
 	settingId: string;
 	clientKey: string;
+	countryCode: string | null;
 	amountCents: number;
 	currencyCode: string;
 	/** Enables the "save card" checkbox + store fields when a customer is logged in. */
@@ -199,12 +197,13 @@ export function AdyenAdvancedCardStep({
 		}
 
 		(async () => {
-			// Advanced flow has no session to read the shopper country from; adyen-web
-			// throws without a countryCode. Derive it from the order (server-side).
-			const countryCode = await getOrderCountryCode(orderId);
-			if (cancelled || !containerRef.current) return;
+			// adyen-web throws without a countryCode, and with no session there is
+			// nothing to read it from. Any country known for the shopper will do: the
+			// playground passes the order's billing address country.
 			if (!countryCode) {
-				onErrorRef.current("Order has no country code to initialise checkout.");
+				onErrorRef.current(
+					"The order needs a billing address to initialise checkout.",
+				);
 				return;
 			}
 
@@ -260,6 +259,7 @@ export function AdyenAdvancedCardStep({
 		orderId,
 		settingId,
 		clientKey,
+		countryCode,
 		amountCents,
 		currencyCode,
 		customerId,
