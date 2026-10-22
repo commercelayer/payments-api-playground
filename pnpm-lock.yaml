@@ -20,6 +20,9 @@ importers:
       '@mollie/api-client':
         specifier: ^4.6.0
         version: 4.6.0
+      '@paypal/paypal-js':
+        specifier: ^11.2.0
+        version: 11.2.0
       '@stripe/react-stripe-js':
         specifier: ^6.12.0
         version: 6.12.0(@stripe/stripe-js@9.17.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -434,6 +437,9 @@ packages:
 
   '@paypal/paypal-js@11.0.0':
     resolution: {integrity: sha512-V1xjR8oTPRU55V11OzsUd2wXE9QUTqs8ybPcgtkp4rVN+XB05taMFzn5nfhsK+LlTCehs07IfHSdXJdjXXgXYQ==}
+
+  '@paypal/paypal-js@11.2.0':
+    resolution: {integrity: sha512-/qFVbiz/+9W8bW680g5M72cftZBvpSL7RKnPx5YLxgncjJKZovCL2FbW2Y2s5Jn/zZvrCJIL4TcVztPFOk6aJA==}
 
   '@playwright/test@1.63.0':
     resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
@@ -1347,6 +1353,10 @@ snapshots:
       typescript: 4.9.5
 
   '@paypal/paypal-js@11.0.0':
+    dependencies:
+      promise-polyfill: 8.3.0
+
+  '@paypal/paypal-js@11.2.0':
     dependencies:
       promise-polyfill: 8.3.0
 

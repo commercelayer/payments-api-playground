@@ -39,6 +39,7 @@ tests/e2e/
   adyen-advanced-checkout.spec.ts  # Adyen advanced-flow card, then paying again with the saved card
   adyen-paypal.spec.ts        # PayPal popup through the Adyen Drop-in (needs E2E_PAYPAL_*)
   braintree-checkout.spec.ts  # Braintree Hosted Fields (3DS challenge, frictionless, decline + retry) and Drop-in
+  paypal-checkout.spec.ts     # PayPal popup through a PayPal payment setting (needs E2E_PAYPAL_*)
 ```
 
 Gift cards are created via the debug "Gift Cards" panel on the order page

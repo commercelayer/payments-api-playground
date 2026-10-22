@@ -4,7 +4,7 @@
  * PaymentSection — the checkout's payment step, on the CL payments API.
  *
  * Each gateway's integration lives in its own module under src/gateways/
- * (stripe, adyen, braintree, mollie, manual): read one of them to see how that
+ * (stripe, adyen, braintree, paypal, mollie, manual): read one of them to see how that
  * gateway goes from the shopper's choice to an authorized payment_session. The
  * contract between this component and a module is `GatewayPaymentProps`
  * (src/gateways/types.ts). This component holds what every gateway shares:
@@ -68,6 +68,7 @@ import {
 	MOLLIE_RETURN_PARAMS,
 	resumeMollieRedirect,
 } from "@/gateways/mollie/redirect-return";
+import { PayPalPayment } from "@/gateways/paypal/paypal-payment";
 import { payWithStripeWallet } from "@/gateways/stripe/pay-with-wallet";
 import {
 	resumeStripeRedirect,
@@ -145,6 +146,8 @@ function GatewayPayment(props: GatewayPaymentProps) {
 			return <AdyenPayment {...props} />;
 		case "payment_setting_braintrees":
 			return <BraintreePayment {...props} />;
+		case "payment_setting_paypals":
+			return <PayPalPayment {...props} />;
 		case "payment_setting_externals":
 			return <MolliePayment {...props} />;
 		case "payment_setting_manuals":
@@ -250,7 +253,8 @@ export function PaymentSection({
 			const t = restoredMethodSession?.payment_setting?.type;
 			return t === "payment_setting_stripes" ||
 				t === "payment_setting_adyens" ||
-				t === "payment_setting_braintrees"
+				t === "payment_setting_braintrees" ||
+				t === "payment_setting_paypals"
 				? restoredMethodSession
 				: null;
 		},
