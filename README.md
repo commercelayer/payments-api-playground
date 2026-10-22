@@ -30,7 +30,7 @@ your own integration.
   placed when nothing is left to pay.
 - **Gift cards:** apply one or more before choosing a method.
 - **Stored cards:** a logged-in customer can save a card while paying (Stripe,
-  Adyen), or a PayPal account, and pay with it on the next order.
+  Adyen, Braintree), or a PayPal account, and pay with it on the next order.
 - **Subscriptions:** pick a frequency on the order, pay with a card that gets
   stored, and manage the subscription Commerce Layer creates.
 - **Redirects and 3-D Secure:** Amazon Pay through Stripe, Klarna through

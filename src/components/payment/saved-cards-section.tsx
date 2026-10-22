@@ -11,6 +11,8 @@ function gatewayBadge(type: string | undefined): {
 			return { label: "Stripe", className: "bg-indigo-100 text-indigo-700" };
 		case "payment_setting_adyens":
 			return { label: "Adyen", className: "bg-emerald-100 text-emerald-700" };
+		case "payment_setting_braintrees":
+			return { label: "Braintree", className: "bg-sky-100 text-sky-700" };
 		case "payment_setting_paypals":
 			return { label: "PayPal", className: "bg-blue-100 text-blue-700" };
 		default:
