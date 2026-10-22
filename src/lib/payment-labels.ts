@@ -70,8 +70,17 @@ export function cardDisplay(wallet: PaymentWallet): {
 	return { brand, last4, exp: fmtExp(month, year) };
 }
 
-/** A one-line card label, e.g. "VISA •••• 4242". */
+/** The email of a stored PayPal account, or null for any other wallet. */
+export function paypalAccount(wallet: PaymentWallet): string | null {
+	const email = (wallet.payment_data as Record<string, unknown> | null)
+		?.email_address;
+	return typeof email === "string" && email ? email : null;
+}
+
+/** A one-line label, e.g. "VISA •••• 4242" or "PayPal shopper@example.com". */
 export function cardLabel(wallet: PaymentWallet): string {
+	const account = paypalAccount(wallet);
+	if (account) return `PayPal ${account}`;
 	const { brand, last4 } = cardDisplay(wallet);
 	if (!brand && !last4) return wallet.payment_token ?? wallet.id;
 	return `${brand} •••• ${last4}`.trim();

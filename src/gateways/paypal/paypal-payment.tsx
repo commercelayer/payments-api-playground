@@ -19,14 +19,21 @@ import { PayPalButtonStep } from "./paypal-button-step";
  *    PayPal order (or captures it, when the setting has auto capture on). It
  *    is polled until it settles.
  *
- * One-off orders only: storing the PayPal account for later is not offered
- * yet.
+ * To store the PayPal account, the session is created with `vaulting: true`
+ * and a `return_url` / `cancel_url` in `client_data`, which PayPal requires
+ * whenever an account is stored, even though its window here is a popup that
+ * never sends the page anywhere. CL asks PayPal to vault the account once the
+ * payment succeeds, and links the payment_wallet itself when the authorization
+ * runs. As with cards, storing takes the shopper's consent, and a guest has no
+ * customer to store it on.
  */
 export function PayPalPayment({
 	client,
 	orderId,
 	setting,
 	amountCents,
+	customerId,
+	mustSaveCard,
 	session,
 	onSessionChange,
 	authorizeGiftCards,
@@ -38,6 +45,7 @@ export function PayPalPayment({
 	const clientId =
 		(setting as PaymentSettingPaypal & { client_id?: string | null })
 			.client_id ?? null;
+	const [saveToWallet, setSaveToWallet] = useState(false);
 	const [confirming, setConfirming] = useState(false);
 	const [confirmError, setConfirmError] = useState<string | null>(null);
 	const [authorizing, setAuthorizing] = useState(false);
@@ -47,10 +55,18 @@ export function PayPalPayment({
 		if (amountCents == null) return;
 		setConfirming(true);
 		setConfirmError(null);
+		const vaulting = !!customerId && (saveToWallet || mustSaveCard);
+		// PayPal never sends the shopper to these from the popup, so the page
+		// itself is fine for both.
+		const pageUrl = window.location.origin + window.location.pathname;
 		try {
 			onSessionChange(
 				await client.payment_sessions.create({
 					amount_cents: amountCents,
+					vaulting,
+					client_data: vaulting
+						? { return_url: pageUrl, cancel_url: pageUrl }
+						: undefined,
 					payment_setting: client.payment_settings.relationship(setting.id),
 					order: client.orders.relationship(orderId),
 				}),
@@ -105,6 +121,24 @@ export function PayPalPayment({
 	if (!session) {
 		return (
 			<div className="mt-2 flex flex-col gap-2">
+				{customerId &&
+					(mustSaveCard ? (
+						<p className="text-xs text-gray-500">
+							This PayPal account will be saved — the subscription needs it to
+							charge the orders after this one.
+						</p>
+					) : (
+						<label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+							<input
+								type="checkbox"
+								checked={saveToWallet}
+								onChange={(e) => setSaveToWallet(e.target.checked)}
+								disabled={confirming}
+								className="accent-gray-900"
+							/>
+							Save PayPal account for future use
+						</label>
+					))}
 				<button
 					type="button"
 					onClick={handleConfirm}

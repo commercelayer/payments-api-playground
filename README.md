@@ -30,7 +30,7 @@ your own integration.
   placed when nothing is left to pay.
 - **Gift cards:** apply one or more before choosing a method.
 - **Stored cards:** a logged-in customer can save a card while paying (Stripe,
-  Adyen) and pay with it on the next order.
+  Adyen), or a PayPal account, and pay with it on the next order.
 - **Subscriptions:** pick a frequency on the order, pay with a card that gets
   stored, and manage the subscription Commerce Layer creates.
 - **Redirects and 3-D Secure:** Amazon Pay through Stripe, Klarna through
@@ -45,7 +45,7 @@ your own integration.
 | `src/gateways/stripe/` | Stripe card payment, the Amazon Pay redirect return, stored-card reuse, express checkout |
 | `src/gateways/adyen/` | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout |
 | `src/gateways/braintree/` | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser |
-| `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session |
+| `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
 | `src/gateways/mollie/` | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`) |
 | `src/gateways/manual/` | Manual payment: session and authorization in one step |
 | `src/gateways/types.ts` | The contract between the checkout and a gateway module |

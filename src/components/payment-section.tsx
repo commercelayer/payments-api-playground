@@ -25,7 +25,7 @@
  *  3. Saved cards — succeeded payment_wallets of the logged-in customer are
  *                   offered as one-click "Saved cards".  Paying with one is
  *                   gateway-specific (stripe/pay-with-wallet.ts,
- *                   adyen/saved-card-payment.tsx).  Storing a card happens
+ *                   adyen/saved-card-payment.tsx, paypal/pay-with-wallet.ts).  Storing a card happens
  *                   inside each gateway's flow, through the session's
  *                   `vaulting` flag.
  *
@@ -68,6 +68,7 @@ import {
 	MOLLIE_RETURN_PARAMS,
 	resumeMollieRedirect,
 } from "@/gateways/mollie/redirect-return";
+import { payWithPayPalWallet } from "@/gateways/paypal/pay-with-wallet";
 import { PayPalPayment } from "@/gateways/paypal/paypal-payment";
 import { payWithStripeWallet } from "@/gateways/stripe/pay-with-wallet";
 import {
@@ -458,6 +459,9 @@ export function PaymentSection({
 		const setting = availablePaymentSettings.find(
 			(s) => s.id === wallet.payment_setting?.id,
 		);
+		if (setting?.type === "payment_setting_paypals") {
+			return handlePayWithWalletPayPal(wallet, setting);
+		}
 		if (setting?.type === "payment_setting_adyens") {
 			return handlePayWithWalletAdyen(
 				wallet,
@@ -496,6 +500,30 @@ export function PaymentSection({
 		setWalletError(null);
 		try {
 			await payWithStripeWallet({
+				client,
+				orderId,
+				wallet,
+				setting: paymentSetting,
+				amountCents: remainingPaymentAmountCents,
+				authorizeGiftCards,
+			});
+			autoPlaceRef.current = true;
+			onGiftCardApplied(); // silent order refresh
+		} catch (e) {
+			setWalletError(e instanceof Error ? e.message : "Payment failed.");
+		} finally {
+			setPayingWithWalletId(null);
+		}
+	}
+
+	async function handlePayWithWalletPayPal(
+		wallet: PaymentWallet,
+		paymentSetting: PaymentSetting,
+	) {
+		setPayingWithWalletId(wallet.id);
+		setWalletError(null);
+		try {
+			await payWithPayPalWallet({
 				client,
 				orderId,
 				wallet,

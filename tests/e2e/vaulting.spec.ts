@@ -19,6 +19,15 @@ async function savedCardCount(page: Page): Promise<number> {
 	return page.getByRole("button", { name: "Remove saved card" }).count();
 }
 
+/** The PayPal tests log in to PayPal's sandbox as a buyer in a popup. */
+function skipWithoutPayPalBuyer(): void {
+	test.skip(
+		!process.env.E2E_PAYPAL_EMAIL || !process.env.E2E_PAYPAL_PASSWORD,
+		"E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD not set",
+	);
+	test.setTimeout(150_000);
+}
+
 async function payWithStripe(checkout: CheckoutPage): Promise<void> {
 	await checkout.selectMethod("payment_setting_stripes");
 	await checkout.confirm();
@@ -147,6 +156,85 @@ test.describe("vaulting", () => {
 				{ timeout: 120_000, intervals: [5_000] },
 			)
 			.toBeGreaterThan(0);
+	});
+
+	test("saves a PayPal account on a one-off order when the shopper opts in", async ({
+		page,
+	}) => {
+		skipWithoutPayPalBuyer();
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+		const before = await savedCardCount(page);
+
+		await checkout.selectMethod("payment_setting_paypals");
+		await page
+			.getByRole("checkbox", { name: "Save PayPal account for future use" })
+			.check();
+		await checkout.confirm();
+		await checkout.approveInPayPal();
+		await checkout.expectPlaced();
+
+		await expect
+			.poll(
+				async () => {
+					await checkout.create();
+					return savedCardCount(page);
+				},
+				{ timeout: 60_000, intervals: [2_000] },
+			)
+			.toBeGreaterThan(before);
+	});
+
+	test("activates a weekly subscription paid with a new PayPal account", async ({
+		page,
+	}) => {
+		skipWithoutPayPalBuyer();
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+
+		await checkout.selectFrequency("Every week");
+		await checkout.selectFirstShippingMethod();
+		await checkout.selectMethod("payment_setting_paypals");
+		await expect(
+			page.getByText(/This PayPal account will be saved/),
+		).toBeVisible();
+		await checkout.confirm();
+		await checkout.approveInPayPal();
+		await checkout.expectPlaced();
+
+		const orderUrl = page.url();
+		const section = checkout.subscriptionSection();
+		await expect
+			.poll(
+				async () => {
+					await page.goto(orderUrl);
+					await section
+						.getByText(/^(active|inactive|pending|draft)$/)
+						.first()
+						.waitFor({ timeout: 20_000 })
+						.catch(() => {});
+					return section.getByText("active", { exact: true }).count();
+				},
+				{ timeout: 90_000, intervals: [3_000] },
+			)
+			.toBeGreaterThan(0);
+	});
+
+	test("pays again with a saved PayPal account", async ({ page }) => {
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+
+		const account = page
+			.locator("li")
+			.filter({ hasText: /paypal/i })
+			.filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
+			.first();
+		await expect(account).toBeVisible();
+		await account.getByRole("button", { name: "Pay", exact: true }).click();
+		await checkout.expectPlaced();
 	});
 
 	test("pays again with a saved Stripe card", async ({ page }) => {
