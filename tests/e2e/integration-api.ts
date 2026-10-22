@@ -83,3 +83,34 @@ export async function raiseOrderTotalTo(
 		});
 	}
 }
+
+/**
+ * For each PayPal payment_session of the order, the amount Commerce Layer
+ * recorded and the amount PayPal itself authorized, read from the
+ * authorization's `response_data` (the PayPal order). Only an integration
+ * token sees that data.
+ */
+export async function fetchPayPalAuthorizedAmounts(
+	orderId: string,
+): Promise<Array<{ sessionCents: number; paypalCents: number | null }>> {
+	const client = await integrationClient();
+	const order = await client.orders.retrieve(orderId, {
+		include: [
+			"payment_sessions",
+			"payment_sessions.payment_setting",
+			"payment_sessions.payment_authorization",
+		],
+	});
+	return (order.payment_sessions ?? [])
+		.filter((s) => s.payment_setting?.type === "payment_setting_paypals")
+		.map((s) => {
+			const value =
+				s.payment_authorization?.response_data?.purchase_units?.[0]?.payments
+					?.authorizations?.[0]?.amount?.value;
+			return {
+				sessionCents: s.amount_cents ?? 0,
+				paypalCents:
+					typeof value === "string" ? Math.round(Number(value) * 100) : null,
+			};
+		});
+}

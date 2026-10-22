@@ -647,6 +647,45 @@ export class CheckoutPage {
 	 * `pollAndPlace` (retries waiting on the provider webhook), so this is given a
 	 * generous timeout.
 	 */
+	/**
+	 * Clicks PayPal's button, then logs in and pays in the popup it opens, with
+	 * the sandbox buyer in `E2E_PAYPAL_EMAIL` / `E2E_PAYPAL_PASSWORD`.
+	 */
+	async approveInPayPal(): Promise<void> {
+		const email = process.env.E2E_PAYPAL_EMAIL;
+		const password = process.env.E2E_PAYPAL_PASSWORD;
+		if (!email || !password) {
+			throw new Error("Missing E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD");
+		}
+		const button = this.page
+			.getByTestId("paypal-checkout")
+			.locator("paypal-button");
+		await expect(button).toBeVisible({ timeout: 30_000 });
+		const popupPromise = this.page.waitForEvent("popup", { timeout: 30_000 });
+		await button.click();
+		const popup = await popupPromise;
+		await popup.waitForLoadState();
+
+		// Two-step sign-in: the email is submitted on its own, and the password
+		// field does not exist until it has been.
+		await popup.fill("input[name=login_email]", email);
+		await popup.click("#btnNext");
+		await popup.fill("input[name=login_password]", password);
+		await popup.click("#btnLogin");
+
+		const cookieBanner = popup.locator("#gdpr-container >> text=Accept");
+		if (await cookieBanner.isVisible().catch(() => false)) {
+			await cookieBanner.click();
+		}
+
+		// "Pay" (or "Agree and pay" when the account is being saved), with the
+		// sandbox account's default funding source.
+		await popup.click('[data-testid="submit-button-initial"]', {
+			timeout: 60_000,
+		});
+		await popup.waitForEvent("close", { timeout: 45_000 });
+	}
+
 	async expectPlaced(): Promise<void> {
 		await expect(
 			this.page.getByText(/^(placed|approved)$/, { exact: true }).first(),

@@ -23,14 +23,14 @@ your own integration.
 
 - **Checkout with several gateways:** Stripe (Payment Element), Adyen (Drop-in,
   or the Card Component in the advanced flow), Braintree (Hosted Fields or
-  Drop-in), Mollie as an external payment setting, and manual payments (wire
-  transfer).
+  Drop-in), PayPal (its own payment setting, with PayPal's button), Mollie as
+  an external payment setting, and manual payments (wire transfer).
 - **Split payments:** pay part of the order with one method and the rest with
   another. Each authorized payment session lowers the balance, and the order is
   placed when nothing is left to pay.
 - **Gift cards:** apply one or more before choosing a method.
 - **Stored cards:** a logged-in customer can save a card while paying (Stripe,
-  Adyen) and pay with it on the next order.
+  Adyen, Braintree), or a PayPal account, and pay with it on the next order.
 - **Subscriptions:** pick a frequency on the order, pay with a card that gets
   stored, and manage the subscription Commerce Layer creates.
 - **Redirects and 3-D Secure:** Amazon Pay through Stripe, Klarna through
@@ -45,6 +45,7 @@ your own integration.
 | `src/gateways/stripe/` | Stripe card payment, the Amazon Pay redirect return, stored-card reuse, express checkout |
 | `src/gateways/adyen/` | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout |
 | `src/gateways/braintree/` | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser |
+| `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
 | `src/gateways/mollie/` | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`) |
 | `src/gateways/manual/` | Manual payment: session and authorization in one step |
 | `src/gateways/types.ts` | The contract between the checkout and a gateway module |
@@ -73,9 +74,11 @@ The playground sells a single SKU on a single market. The organization needs:
   buttons, Adyen's advanced flow and the debug panels.
 - **The payment settings you want to try**, enabled and listed on the market:
   `payment_setting_stripes`, `payment_setting_adyens`,
-  `payment_setting_braintrees`, `payment_setting_externals` (Mollie),
+  `payment_setting_braintrees`, `payment_setting_paypals`,
+  `payment_setting_externals` (Mollie),
   `payment_setting_manuals`, and `payment_setting_gift_cards` for gift cards.
-  Card gateways need their sandbox credentials and their public key. Adyen's
+  Card gateways need their sandbox credentials and their public key. PayPal
+  needs a sandbox REST app's client ID and secret. Adyen's
   client key must allow the origin you run the app on, for example
   `http://localhost:3000`.
 - **A customer with a password** (optional), to try stored cards and
