@@ -258,6 +258,9 @@ test.describe("vaulting", () => {
 	test("saves a Braintree card on a one-off order when the shopper opts in", async ({
 		page,
 	}) => {
+		// Hosted Fields and the 3-D Secure step take a good part of the default
+		// minute before the wait for the wallet even starts.
+		test.setTimeout(150_000);
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
@@ -288,6 +291,9 @@ test.describe("vaulting", () => {
 	test("activates a weekly subscription paid with a new Braintree card", async ({
 		page,
 	}) => {
+		// Hosted Fields and the 3-D Secure step take a good part of the default
+		// minute before the wait for the wallet even starts.
+		test.setTimeout(150_000);
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
