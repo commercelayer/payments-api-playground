@@ -4,10 +4,11 @@
  * PaymentSection — the checkout's payment step, on the CL payments API.
  *
  * Each gateway's integration lives in its own module under src/gateways/
- * (stripe, adyen, braintree, paypal, mollie, manual): read one of them to see how that
- * gateway goes from the shopper's choice to an authorized payment_session. The
- * contract between this component and a module is `GatewayPaymentProps`
- * (src/gateways/types.ts). This component holds what every gateway shares:
+ * (stripe, adyen, braintree, paypal, checkout-com, mollie, manual): read one
+ * of them to see how that gateway goes from the shopper's choice to an
+ * authorized payment_session. The contract between this component and a
+ * module is `GatewayPaymentProps` (src/gateways/types.ts). This component
+ * holds what every gateway shares:
  *
  *  1. Gift cards  — applied before choosing a payment method; they reduce the
  *                   remaining balance immediately.  Their payment_sessions are
@@ -34,9 +35,9 @@
  *                   `vaulting` flag.
  *
  *  4. Redirect returns — a gateway that sends the shopper off-site (Amazon Pay
- *                   through Stripe, Mollie, an Adyen 3-D Secure redirect)
- *                   resumes in its redirect-return.ts; this component then
- *                   places the order.
+ *                   through Stripe, Mollie, a Checkout.com or Adyen 3-D Secure
+ *                   redirect) resumes in its redirect-return.ts; this
+ *                   component then places the order.
  *
  *  5. Re-price — when the order total moves, the sessions holding no money are
  *                   rebuilt for the new total.
@@ -66,6 +67,12 @@ import { AdyenSavedCardPayment } from "@/gateways/adyen/saved-card-payment";
 import { AdyenThreeDSAction } from "@/gateways/adyen/three-ds-action";
 import { BraintreePayment } from "@/gateways/braintree/braintree-payment";
 import { payWithBraintreeWallet } from "@/gateways/braintree/pay-with-wallet";
+import { CheckoutComPayment } from "@/gateways/checkout-com/checkout-com-payment";
+import {
+	CHECKOUT_COM_RETURN_PARAMS,
+	checkoutComReturn,
+	resumeCheckoutComRedirect,
+} from "@/gateways/checkout-com/redirect-return";
 import { ManualPayment } from "@/gateways/manual/manual-payment";
 import { MolliePayment } from "@/gateways/mollie/mollie-payment";
 import {
@@ -154,6 +161,8 @@ function GatewayPayment(props: GatewayPaymentProps) {
 			return <BraintreePayment {...props} />;
 		case "payment_setting_paypals":
 			return <PayPalPayment {...props} />;
+		case "payment_setting_checkout_coms":
+			return <CheckoutComPayment {...props} />;
 		case "payment_setting_externals":
 			return <MolliePayment {...props} />;
 		case "payment_setting_manuals":
@@ -191,6 +200,8 @@ export function PaymentSection({
 	const adyenReturnParams = adyenReturn(searchParams);
 	const isAdyenRedirectReturn = adyenReturnParams != null;
 	const isMollieRedirectReturn = isMollieReturn(searchParams);
+	const checkoutComOutcome = checkoutComReturn(searchParams);
+	const isCheckoutComRedirectReturn = checkoutComOutcome != null;
 
 	const client = useMemo(() => createClient(accessToken), [accessToken]);
 
@@ -260,7 +271,8 @@ export function PaymentSection({
 			return t === "payment_setting_stripes" ||
 				t === "payment_setting_adyens" ||
 				t === "payment_setting_braintrees" ||
-				t === "payment_setting_paypals"
+				t === "payment_setting_paypals" ||
+				t === "payment_setting_checkout_coms"
 				? restoredMethodSession
 				: null;
 		},
@@ -398,6 +410,22 @@ export function PaymentSection({
 		}, MOLLIE_RETURN_PARAMS);
 	}, [isMollieRedirectReturn]);
 
+	// ── Checkout.com redirect-return recovery (3-D Secure) ───────────────────
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once on mount when redirect params are present
+	useEffect(() => {
+		if (!checkoutComOutcome || redirectHandledRef.current) return;
+		redirectHandledRef.current = true;
+		completeRedirectReturn(async () => {
+			await resumeCheckoutComRedirect({
+				client,
+				paymentSessions,
+				outcome: checkoutComOutcome,
+				authorizeGiftCards,
+			});
+			return "authorized";
+		}, CHECKOUT_COM_RETURN_PARAMS);
+	}, [isCheckoutComRedirectReturn]);
+
 	// ── Adyen 3DS redirect-return recovery ───────────────────────────────────
 	// `redirectResult` is single-use: Adyen rejects a second submission of the
 	// same value, hence its own once-per-mount guard.
@@ -434,6 +462,7 @@ export function PaymentSection({
 			shippingReady &&
 			!isStripeRedirectReturn &&
 			!isMollieRedirectReturn &&
+			!isCheckoutComRedirectReturn &&
 			!isAdyenRedirectReturn
 		) {
 			autoPlaceRef.current = false;
@@ -889,6 +918,7 @@ export function PaymentSection({
 		shippingReady &&
 		!isStripeRedirectReturn &&
 		!isMollieRedirectReturn &&
+		!isCheckoutComRedirectReturn &&
 		!isAdyenRedirectReturn &&
 		remainingPaymentAmountCents === 0 &&
 		pendingSession == null;
@@ -897,13 +927,14 @@ export function PaymentSection({
 
 	// ── Render path A: redirect in progress ──────────────────────────────────
 	// The customer has returned from Amazon Pay (or similar), from Mollie, or
-	// from an Adyen 3DS redirect. Show a spinner while the recovery effect
+	// from a Checkout.com or Adyen 3DS redirect. Show a spinner while the recovery effect
 	// submits the result and places the order — not the checkout form, which
 	// would invite a double payment. A follow-up 3DS action, if any, still
 	// renders below.
 	if (
 		isStripeRedirectReturn ||
 		isMollieRedirectReturn ||
+		isCheckoutComRedirectReturn ||
 		(isAdyenRedirectReturn && adyenAction == null)
 	) {
 		return <RedirectPendingView placeError={placeError} />;
