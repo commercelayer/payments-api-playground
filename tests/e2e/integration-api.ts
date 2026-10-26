@@ -50,6 +50,27 @@ export async function fetchOrderSubscriptionState(orderId: string) {
 }
 
 /**
+ * The order's gift card sessions, each with its authorization status (null
+ * when it has none). A gift card is debited the moment it is authorized, so an
+ * authorization here means its balance has been spent on this order.
+ */
+export async function fetchGiftCardSessions(orderId: string) {
+	const client = await integrationClient();
+	const order = await client.orders.retrieve(orderId, {
+		include: [
+			"payment_sessions.payment_setting",
+			"payment_sessions.payment_authorization",
+		],
+	});
+	return (order.payment_sessions ?? [])
+		.filter((s) => s.payment_setting?.type === "payment_setting_gift_cards")
+		.map((s) => ({
+			status: s.status,
+			authorization: s.payment_authorization?.status ?? null,
+		}));
+}
+
+/**
  * Raises the quantity of the order's SKU line item until the order total
  * reaches `minCents`. Setting the quantity directly takes one or two writes,
  * where stepping it up from the checkout re-prices the order once per unit.
