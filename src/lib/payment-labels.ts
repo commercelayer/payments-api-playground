@@ -12,6 +12,8 @@ export function labelForType(type: string): string {
 			return "External payment";
 		case "payment_setting_braintrees":
 			return "Braintree";
+		case "payment_setting_paypals":
+			return "PayPal";
 		default:
 			return type;
 	}
@@ -38,6 +40,7 @@ function fmtExp(month: unknown, year: unknown): string {
  *  - Stripe: `{ card: { brand, last4, exp_month, exp_year } }`
  *  - Adyen (event):  `{ paymentMethod, additionalData: { cardSummary, expiryDate: "MM/YYYY" } }`
  *  - Adyen (stored): `{ brand, lastFour, expiryMonth, expiryYear }`
+ *  - Braintree: `{ details_type, brand_code, last4, expiration_month, expiration_year }`
  */
 export function cardDisplay(wallet: PaymentWallet): {
 	brand: string;
@@ -46,6 +49,15 @@ export function cardDisplay(wallet: PaymentWallet): {
 } {
 	// biome-ignore lint/suspicious/noExplicitAny: gateway-specific payment_data
 	const pd = (wallet.payment_data ?? {}) as Record<string, any>;
+
+	// Braintree
+	if (pd.details_type) {
+		return {
+			brand: String(pd.brand_code ?? "").toUpperCase(),
+			last4: String(pd.last4 ?? ""),
+			exp: fmtExp(pd.expiration_month, pd.expiration_year),
+		};
+	}
 
 	// Stripe
 	if (pd.card) {
@@ -68,8 +80,17 @@ export function cardDisplay(wallet: PaymentWallet): {
 	return { brand, last4, exp: fmtExp(month, year) };
 }
 
-/** A one-line card label, e.g. "VISA •••• 4242". */
+/** The email of a stored PayPal account, or null for any other wallet. */
+export function paypalAccount(wallet: PaymentWallet): string | null {
+	const email = (wallet.payment_data as Record<string, unknown> | null)
+		?.email_address;
+	return typeof email === "string" && email ? email : null;
+}
+
+/** A one-line label, e.g. "VISA •••• 4242" or "PayPal shopper@example.com". */
 export function cardLabel(wallet: PaymentWallet): string {
+	const account = paypalAccount(wallet);
+	if (account) return `PayPal ${account}`;
 	const { brand, last4 } = cardDisplay(wallet);
 	if (!brand && !last4) return wallet.payment_token ?? wallet.id;
 	return `${brand} •••• ${last4}`.trim();

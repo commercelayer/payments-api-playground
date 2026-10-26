@@ -4,7 +4,7 @@
  * PaymentSection — the checkout's payment step, on the CL payments API.
  *
  * Each gateway's integration lives in its own module under src/gateways/
- * (stripe, adyen, braintree, mollie, manual): read one of them to see how that
+ * (stripe, adyen, braintree, paypal, mollie, manual): read one of them to see how that
  * gateway goes from the shopper's choice to an authorized payment_session. The
  * contract between this component and a module is `GatewayPaymentProps`
  * (src/gateways/types.ts). This component holds what every gateway shares:
@@ -25,7 +25,9 @@
  *  3. Saved cards — succeeded payment_wallets of the logged-in customer are
  *                   offered as one-click "Saved cards".  Paying with one is
  *                   gateway-specific (stripe/pay-with-wallet.ts,
- *                   adyen/saved-card-payment.tsx).  Storing a card happens
+ *                   adyen/saved-card-payment.tsx,
+ *                   braintree/pay-with-wallet.ts, paypal/pay-with-wallet.ts).
+ *                   Storing a card happens
  *                   inside each gateway's flow, through the session's
  *                   `vaulting` flag.
  *
@@ -61,6 +63,7 @@ import {
 import { AdyenSavedCardPayment } from "@/gateways/adyen/saved-card-payment";
 import { AdyenThreeDSAction } from "@/gateways/adyen/three-ds-action";
 import { BraintreePayment } from "@/gateways/braintree/braintree-payment";
+import { payWithBraintreeWallet } from "@/gateways/braintree/pay-with-wallet";
 import { ManualPayment } from "@/gateways/manual/manual-payment";
 import { MolliePayment } from "@/gateways/mollie/mollie-payment";
 import {
@@ -68,6 +71,8 @@ import {
 	MOLLIE_RETURN_PARAMS,
 	resumeMollieRedirect,
 } from "@/gateways/mollie/redirect-return";
+import { payWithPayPalWallet } from "@/gateways/paypal/pay-with-wallet";
+import { PayPalPayment } from "@/gateways/paypal/paypal-payment";
 import { payWithStripeWallet } from "@/gateways/stripe/pay-with-wallet";
 import {
 	resumeStripeRedirect,
@@ -145,6 +150,8 @@ function GatewayPayment(props: GatewayPaymentProps) {
 			return <AdyenPayment {...props} />;
 		case "payment_setting_braintrees":
 			return <BraintreePayment {...props} />;
+		case "payment_setting_paypals":
+			return <PayPalPayment {...props} />;
 		case "payment_setting_externals":
 			return <MolliePayment {...props} />;
 		case "payment_setting_manuals":
@@ -250,7 +257,8 @@ export function PaymentSection({
 			const t = restoredMethodSession?.payment_setting?.type;
 			return t === "payment_setting_stripes" ||
 				t === "payment_setting_adyens" ||
-				t === "payment_setting_braintrees"
+				t === "payment_setting_braintrees" ||
+				t === "payment_setting_paypals"
 				? restoredMethodSession
 				: null;
 		},
@@ -454,11 +462,17 @@ export function PaymentSection({
 		const setting = availablePaymentSettings.find(
 			(s) => s.id === wallet.payment_setting?.id,
 		);
+		if (setting?.type === "payment_setting_paypals") {
+			return handlePayWithStoredWallet(wallet, setting, payWithPayPalWallet);
+		}
 		if (setting?.type === "payment_setting_adyens") {
 			return handlePayWithWalletAdyen(
 				wallet,
 				setting as PaymentSettingAdyen & { public_key?: string | null },
 			);
+		}
+		if (setting?.type === "payment_setting_braintrees") {
+			return handlePayWithStoredWallet(wallet, setting, payWithBraintreeWallet);
 		}
 		return handlePayWithWalletStripe(
 			wallet,
@@ -492,6 +506,33 @@ export function PaymentSection({
 		setWalletError(null);
 		try {
 			await payWithStripeWallet({
+				client,
+				orderId,
+				wallet,
+				setting: paymentSetting,
+				amountCents: remainingPaymentAmountCents,
+				authorizeGiftCards,
+			});
+			autoPlaceRef.current = true;
+			onGiftCardApplied(); // silent order refresh
+		} catch (e) {
+			setWalletError(e instanceof Error ? e.message : "Payment failed.");
+		} finally {
+			setPayingWithWalletId(null);
+		}
+	}
+
+	/** Reuse a saved Braintree card or PayPal account: CL pays from the stored
+	 * wallet alone, so no gateway widget is mounted here. */
+	async function handlePayWithStoredWallet(
+		wallet: PaymentWallet,
+		paymentSetting: PaymentSetting,
+		pay: typeof payWithBraintreeWallet | typeof payWithPayPalWallet,
+	) {
+		setPayingWithWalletId(wallet.id);
+		setWalletError(null);
+		try {
+			await pay({
 				client,
 				orderId,
 				wallet,

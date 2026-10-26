@@ -126,7 +126,8 @@ export async function pollAndPlace(
 // created with `vaulting: true` asks CL to store the card during the charge, and
 // CL links the wallet itself: from the confirmed PaymentIntent on Stripe, from
 // Adyen's `RECURRING_CONTRACT` webhook (keyed by `customer.shopper_reference`)
-// on Adyen. Writing it from here was never reliable anyway: a succeeded
+// on Adyen, from the authorized transaction's vaulted payment method on
+// Braintree. Writing it from here was never reliable anyway: a succeeded
 // authorization isn't readable by the storefront token (401), and the Stripe
 // token only showed up on the session after a webhook, so the old helpers had to
 // sleep and hope.
