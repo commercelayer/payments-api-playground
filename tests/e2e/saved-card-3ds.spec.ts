@@ -58,7 +58,7 @@ test("pays again with a saved Stripe card after a 3-D Secure challenge", async (
 	await expect(savedCard).toHaveCount(0);
 });
 
-test.fixme("pays again with a saved Adyen card after a 3-D Secure challenge", async ({
+test("pays again with a saved Adyen card after a 3-D Secure challenge", async ({
 	page,
 }) => {
 	const checkout = new CheckoutPage(page);
@@ -81,4 +81,11 @@ test.fixme("pays again with a saved Adyen card after a 3-D Secure challenge", as
 	await checkout.payWithSavedAdyenCard({ last4: ADYEN_3DS_CARD.slice(-4) });
 	await checkout.completeAdyenChallenge();
 	await checkout.expectPlaced();
+
+	// Other specs pay with the customer's newest saved Adyen card and don't
+	// expect a challenge, so don't leave this one at the top of the list.
+	await checkout.create();
+	const savedCard = checkout.savedCardRow(/adyen/i, ADYEN_3DS_CARD.slice(-4));
+	await savedCard.getByRole("button", { name: "Remove saved card" }).click();
+	await expect(savedCard).toHaveCount(0);
 });

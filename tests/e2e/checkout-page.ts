@@ -702,15 +702,16 @@ export class CheckoutPage {
 	}
 
 	/**
-	 * Complete Adyen's test 3-D Secure 2 challenge. Its web challenge asks for a
-	 * password, which is `password` in the test environment.
+	 * Complete Adyen's test 3-D Secure 2 challenge. Both of the test issuer pages
+	 * Adyen serves ask for a password, which is `password` in the test
+	 * environment; one confirms with "OK", the other with "Continue".
 	 */
 	async completeAdyenChallenge(): Promise<void> {
 		const { frame, locator } = await this.findInFrames((frame) =>
 			frame.locator('input[type="password"]'),
 		);
 		await locator.fill("password");
-		await frame.getByRole("button", { name: "OK", exact: true }).click();
+		await frame.getByRole("button", { name: /^(ok|continue)$/i }).click();
 	}
 
 	/**
