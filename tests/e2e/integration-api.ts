@@ -69,8 +69,8 @@ export async function fetchOrderWalletId(
 /**
  * Cancels what the e2e customer (`CL_CUSTOMER_EMAIL`) gained since `since`:
  * order subscriptions first, so none is left to renew with a wallet about to
- * go, then payment wallets. Returns how many of each were cancelled and the
- * ids that could not be.
+ * go, then payment wallets. A record the API refuses to cancel doesn't stop
+ * the others: it is reported in `failed` with the API's reason.
  */
 export async function cancelCustomerDataSince(since: Date): Promise<{
 	subscriptions: number;
@@ -123,19 +123,26 @@ export async function cancelCustomerDataSince(since: Date): Promise<{
 		try {
 			await client.order_subscriptions.update({ id, _cancel: true });
 			result.subscriptions++;
-		} catch {
-			result.failed.push(`order_subscriptions/${id}`);
+		} catch (error) {
+			result.failed.push(`order_subscriptions/${id}: ${reasonOf(error)}`);
 		}
 	}
 	for (const id of walletIds) {
 		try {
 			await client.payment_wallets.update({ id, _cancel: true });
 			result.wallets++;
-		} catch {
-			result.failed.push(`payment_wallets/${id}`);
+		} catch (error) {
+			result.failed.push(`payment_wallets/${id}: ${reasonOf(error)}`);
 		}
 	}
 	return result;
+}
+
+/** The first error detail of a failed API call, or its message. */
+function reasonOf(error: unknown): string {
+	const detail = (error as { errors?: { detail?: string }[] }).errors?.[0]
+		?.detail;
+	return detail ?? (error instanceof Error ? error.message : String(error));
 }
 
 /**

@@ -20,7 +20,7 @@ export default async function globalSetup() {
 			`e2e cleanup: cancelled ${subscriptions} order subscriptions and ${wallets} payment wallets`,
 		);
 		if (failed.length) {
-			console.warn(`e2e cleanup: could not cancel ${failed.join(", ")}`);
+			console.warn(`e2e cleanup: could not cancel\n  ${failed.join("\n  ")}`);
 		}
 	};
 }
