@@ -3,7 +3,6 @@
 import "@adyen/adyen-web/styles/adyen.css";
 import type { AdyenCheckoutError, UIElement } from "@adyen/adyen-web";
 import { useEffect, useRef } from "react";
-import { getOrderCountryCode } from "./actions";
 
 /**
  * Renders an Adyen 3DS (or other) action returned when reusing a saved card.
@@ -20,13 +19,13 @@ import { getOrderCountryCode } from "./actions";
 export function AdyenActionStep({
 	action,
 	clientKey,
-	orderId,
+	countryCode,
 	onDetails,
 	onError,
 }: {
 	action: Record<string, unknown>;
 	clientKey: string;
-	orderId: string;
+	countryCode: string | null;
 	/** Full adyen-web `state.data` ({ details, paymentData }) — the caller forwards
 	 * it to CL /payments/details; paymentData links it to the original transaction. */
 	onDetails: (stateData: unknown) => void;
@@ -44,12 +43,13 @@ export function AdyenActionStep({
 		let cancelled = false;
 
 		(async () => {
-			// Advanced flow has no session to read the shopper country from; adyen-web
-			// throws without a countryCode. Derive it from the order (server-side).
-			const countryCode = await getOrderCountryCode(orderId);
-			if (cancelled || !containerRef.current) return;
+			// adyen-web throws without a countryCode, and with no session there is
+			// nothing to read it from. Any country known for the shopper will do: the
+			// playground passes the order's billing address country.
 			if (!countryCode) {
-				onErrorRef.current("Order has no country code to initialise checkout.");
+				onErrorRef.current(
+					"The order needs a billing address to initialise checkout.",
+				);
 				return;
 			}
 
@@ -81,7 +81,7 @@ export function AdyenActionStep({
 			cancelled = true;
 			component?.unmount();
 		};
-	}, [action, clientKey, orderId]);
+	}, [action, clientKey, countryCode]);
 
 	return <div ref={containerRef} className="adyen-action-container" />;
 }

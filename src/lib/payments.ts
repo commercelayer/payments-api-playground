@@ -61,10 +61,11 @@ export async function pollAuthorization(
 /**
  * Authorizes any applied gift card sessions that aren't authorized yet.
  *
- * Gift cards are applied before a payment method is chosen, but their
- * payment_authorization must be created before the non-gift-card method's
- * authorization — otherwise a failed method payment could leave a gift
- * card debited with no corresponding order placement.
+ * Gift cards are applied before a payment method is chosen, but authorized
+ * only once the method's gateway has accepted the payment. A gift card
+ * authorization captures in the same step, while a card authorization is a
+ * hold that a void can release: authorizing the gift cards first would leave
+ * them debited whenever the card is then declined.
  */
 export async function authorizeAppliedGiftCards(
 	client: PaymentClient,
@@ -126,7 +127,8 @@ export async function pollAndPlace(
 // created with `vaulting: true` asks CL to store the card during the charge, and
 // CL links the wallet itself: from the confirmed PaymentIntent on Stripe, from
 // Adyen's `RECURRING_CONTRACT` webhook (keyed by `customer.shopper_reference`)
-// on Adyen. Writing it from here was never reliable anyway: a succeeded
+// on Adyen, from the authorized transaction's vaulted payment method on
+// Braintree. Writing it from here was never reliable anyway: a succeeded
 // authorization isn't readable by the storefront token (401), and the Stripe
 // token only showed up on the session after a webhook, so the old helpers had to
 // sleep and hope.

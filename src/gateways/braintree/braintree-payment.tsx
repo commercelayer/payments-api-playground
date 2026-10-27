@@ -21,8 +21,13 @@ import { BraintreeHostedFieldsStep } from "./hosted-fields-step";
  * 4. The CL payment_authorization is created. CL relays it to Braintree
  *    asynchronously, so it is polled until it settles.
  *
- * One-off orders only: Braintree sessions refuse `vaulting`, so a card can't
- * be stored and a subscription can't be paid this way.
+ * To store the card, the session is created with `vaulting: true`. CL then
+ * authorizes with Braintree's `vaultPaymentMethodAfterTransacting`, so the same
+ * 3DS-verified nonce pays the order and is stored only if the payment succeeds,
+ * and links the payment_wallet itself from the transaction's payment method and
+ * customer. Nothing is written client-side. Hosted Fields has no consent
+ * checkbox, so the consent is asked here, as for Stripe; a guest session never
+ * vaults, because a wallet needs a customer to belong to.
  */
 export function BraintreePayment({
 	client,
@@ -31,6 +36,8 @@ export function BraintreePayment({
 	amountCents,
 	customerEmail,
 	billingAddress,
+	customerId,
+	mustSaveCard,
 	session,
 	onSessionChange,
 	authorizeGiftCards,
@@ -38,6 +45,7 @@ export function BraintreePayment({
 	onCancel,
 }: GatewayPaymentProps) {
 	const [useDropin, setUseDropin] = useState(false);
+	const [saveToWallet, setSaveToWallet] = useState(false);
 	const [confirming, setConfirming] = useState(false);
 	const [confirmError, setConfirmError] = useState<string | null>(null);
 	const [authorizing, setAuthorizing] = useState(false);
@@ -46,9 +54,13 @@ export function BraintreePayment({
 	// token was refused, so a token that keeps failing can't loop.
 	const sessionRenewedRef = useRef(false);
 
-	async function createSession(amount: number | null | undefined) {
+	async function createSession(
+		amount: number | null | undefined,
+		vaulting: boolean,
+	) {
 		return client.payment_sessions.create({
 			amount_cents: amount ?? undefined,
+			vaulting,
 			payment_setting: client.payment_settings.relationship(setting.id),
 			order: client.orders.relationship(orderId),
 		});
@@ -59,7 +71,12 @@ export function BraintreePayment({
 		setConfirming(true);
 		setConfirmError(null);
 		try {
-			onSessionChange(await createSession(amountCents));
+			onSessionChange(
+				await createSession(
+					amountCents,
+					!!customerId && (saveToWallet || mustSaveCard),
+				),
+			);
 		} catch (e) {
 			setConfirmError(errorMessage(e, "Failed to confirm payment."));
 		} finally {
@@ -74,13 +91,15 @@ export function BraintreePayment({
 	 * simply replaces it. The decline reason is not shown because the
 	 * transaction's response_data is withheld from storefront tokens, only the
 	 * status is readable. Errors are rethrown for the widget to display.
+	 *
+	 * On a vaulting session this authorization is also what stores the card, so
+	 * a declined one stores nothing.
 	 */
 	async function handleAuthorize(nonce: string) {
 		if (!session) return;
 		setAuthorizing(true);
 		setAuthorizeError(null);
 		try {
-			await authorizeGiftCards();
 			await client.payment_sessions.update({
 				id: session.id,
 				client_data: { payment_method_id: nonce },
@@ -97,6 +116,14 @@ export function BraintreePayment({
 			if (auth.status !== "succeeded") {
 				throw new Error("The card was declined. Try another card.");
 			}
+			// Only now: the nonce is just a tokenized card, and Braintree accepts or
+			// declines it inside the authorization CL relays, so this is the first
+			// point where a gift card can be debited safely.
+			try {
+				await authorizeGiftCards();
+			} catch {
+				/* best-effort; placement will surface any real problem */
+			}
 			onAuthorized();
 		} finally {
 			setAuthorizing(false);
@@ -105,7 +132,8 @@ export function BraintreePayment({
 
 	/** The stored client token was refused (it can expire before the session
 	 * does), and CL never regenerates it, so swap the session for a new one of
-	 * the same amount. Only once: a second refusal is a real error. */
+	 * the same amount and the same `vaulting`. Only once: a second refusal is a
+	 * real error. */
 	async function renewSession() {
 		if (!session || sessionRenewedRef.current) {
 			setAuthorizeError("Could not load the card form. Please try again.");
@@ -114,7 +142,9 @@ export function BraintreePayment({
 		sessionRenewedRef.current = true;
 		try {
 			await client.payment_sessions.delete(session.id).catch(() => {});
-			onSessionChange(await createSession(session.amount_cents));
+			onSessionChange(
+				await createSession(session.amount_cents, !!session.vaulting),
+			);
 		} catch (e) {
 			onSessionChange(null);
 			setAuthorizeError(errorMessage(e, "Could not load the card form."));
@@ -124,6 +154,24 @@ export function BraintreePayment({
 	if (!session) {
 		return (
 			<div className="mt-2 flex flex-col gap-2">
+				{customerId &&
+					(mustSaveCard ? (
+						<p className="text-xs text-gray-500">
+							This card will be saved — the subscription needs it to charge the
+							orders after this one.
+						</p>
+					) : (
+						<label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+							<input
+								type="checkbox"
+								checked={saveToWallet}
+								onChange={(e) => setSaveToWallet(e.target.checked)}
+								disabled={confirming}
+								className="accent-gray-900"
+							/>
+							Save card for future use
+						</label>
+					))}
 				<label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500">
 					<input
 						type="checkbox"

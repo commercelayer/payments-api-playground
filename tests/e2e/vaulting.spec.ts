@@ -19,6 +19,15 @@ async function savedCardCount(page: Page): Promise<number> {
 	return page.getByRole("button", { name: "Remove saved card" }).count();
 }
 
+/** The PayPal tests log in to PayPal's sandbox as a buyer in a popup. */
+function skipWithoutPayPalBuyer(): void {
+	test.skip(
+		!process.env.E2E_PAYPAL_EMAIL || !process.env.E2E_PAYPAL_PASSWORD,
+		"E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD not set",
+	);
+	test.setTimeout(150_000);
+}
+
 async function payWithStripe(checkout: CheckoutPage): Promise<void> {
 	await checkout.selectMethod("payment_setting_stripes");
 	await checkout.confirm();
@@ -149,6 +158,85 @@ test.describe("vaulting", () => {
 			.toBeGreaterThan(0);
 	});
 
+	test("saves a PayPal account on a one-off order when the shopper opts in", async ({
+		page,
+	}) => {
+		skipWithoutPayPalBuyer();
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+		const before = await savedCardCount(page);
+
+		await checkout.selectMethod("payment_setting_paypals");
+		await page
+			.getByRole("checkbox", { name: "Save PayPal account for future use" })
+			.check();
+		await checkout.confirm();
+		await checkout.approveInPayPal();
+		await checkout.expectPlaced();
+
+		await expect
+			.poll(
+				async () => {
+					await checkout.create();
+					return savedCardCount(page);
+				},
+				{ timeout: 60_000, intervals: [2_000] },
+			)
+			.toBeGreaterThan(before);
+	});
+
+	test("activates a weekly subscription paid with a new PayPal account", async ({
+		page,
+	}) => {
+		skipWithoutPayPalBuyer();
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+
+		await checkout.selectFrequency("Every week");
+		await checkout.selectFirstShippingMethod();
+		await checkout.selectMethod("payment_setting_paypals");
+		await expect(
+			page.getByText(/This PayPal account will be saved/),
+		).toBeVisible();
+		await checkout.confirm();
+		await checkout.approveInPayPal();
+		await checkout.expectPlaced();
+
+		const orderUrl = page.url();
+		const section = checkout.subscriptionSection();
+		await expect
+			.poll(
+				async () => {
+					await page.goto(orderUrl);
+					await section
+						.getByText(/^(active|inactive|pending|draft)$/)
+						.first()
+						.waitFor({ timeout: 20_000 })
+						.catch(() => {});
+					return section.getByText("active", { exact: true }).count();
+				},
+				{ timeout: 90_000, intervals: [3_000] },
+			)
+			.toBeGreaterThan(0);
+	});
+
+	test("pays again with a saved PayPal account", async ({ page }) => {
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+
+		const account = page
+			.locator("li")
+			.filter({ hasText: /paypal/i })
+			.filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
+			.first();
+		await expect(account).toBeVisible();
+		await account.getByRole("button", { name: "Pay", exact: true }).click();
+		await checkout.expectPlaced();
+	});
+
 	test("pays again with a saved Stripe card", async ({ page }) => {
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
@@ -161,6 +249,100 @@ test.describe("vaulting", () => {
 			.first();
 		await expect(stripeCard).toBeVisible();
 		await stripeCard.getByRole("button", { name: "Pay", exact: true }).click();
+		await checkout.expectPlaced();
+	});
+
+	// Braintree rejects the same card for the same amount within a short window
+	// (GATEWAY_REJECTED), and every fixture order has the same total, so these
+	// use cards no other Braintree test uses.
+	test("saves a Braintree card on a one-off order when the shopper opts in", async ({
+		page,
+	}) => {
+		// Hosted Fields and the 3-D Secure step take a good part of the default
+		// minute before the wait for the wallet even starts.
+		test.setTimeout(150_000);
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+		const before = await savedCardCount(page);
+
+		await checkout.selectMethod("payment_setting_braintrees");
+		await page
+			.getByRole("checkbox", { name: "Save card for future use" })
+			.check();
+		await checkout.confirm();
+		await checkout.fillBraintreeTestCard("5200000000001005");
+		await checkout.authorize();
+		await checkout.expectPlaced();
+
+		// CL links the wallet while it processes the authorization, from the
+		// payment method Braintree vaulted after transacting.
+		await expect
+			.poll(
+				async () => {
+					await checkout.create();
+					return savedCardCount(page);
+				},
+				{ timeout: 60_000, intervals: [2_000] },
+			)
+			.toBeGreaterThan(before);
+	});
+
+	test("activates a weekly subscription paid with a new Braintree card", async ({
+		page,
+	}) => {
+		// Hosted Fields and the 3-D Secure step take a good part of the default
+		// minute before the wait for the wallet even starts.
+		test.setTimeout(150_000);
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+
+		await checkout.selectFrequency("Every week");
+		await checkout.selectFirstShippingMethod();
+		await checkout.selectMethod("payment_setting_braintrees");
+		await expect(page.getByText("This card will be saved")).toBeVisible();
+		await checkout.confirm();
+		await checkout.fillBraintreeTestCard("5200000000001096");
+		await checkout.authorize();
+		await checkout.completeBraintreeChallenge();
+		await checkout.expectPlaced();
+
+		const orderUrl = page.url();
+		const section = checkout.subscriptionSection();
+		await expect
+			.poll(
+				async () => {
+					await page.goto(orderUrl);
+					await section
+						.getByText(/^(active|inactive|pending|draft)$/)
+						.first()
+						.waitFor({ timeout: 20_000 })
+						.catch(() => {});
+					return section.getByText("active", { exact: true }).count();
+				},
+				{ timeout: 90_000, intervals: [3_000] },
+			)
+			.toBeGreaterThan(0);
+	});
+
+	test("pays again with a saved Braintree card", async ({ page }) => {
+		const checkout = new CheckoutPage(page);
+		await checkout.loginAsCustomer();
+		await checkout.create();
+		// A different total from the order that saved the card, or the duplicate
+		// check could reject the stored card.
+		await checkout.selectOtherShippingMethod();
+
+		const braintreeCard = page
+			.locator("li")
+			.filter({ hasText: /braintree/i })
+			.filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
+			.first();
+		await expect(braintreeCard).toBeVisible();
+		await braintreeCard
+			.getByRole("button", { name: "Pay", exact: true })
+			.click();
 		await checkout.expectPlaced();
 	});
 });

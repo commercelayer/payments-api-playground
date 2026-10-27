@@ -53,6 +53,7 @@ function adyenWalletBrand(wallet: PaymentWallet): string {
 export function AdyenSavedCardPayment({
 	client,
 	orderId,
+	countryCode,
 	wallet,
 	setting,
 	amountCents,
@@ -65,6 +66,7 @@ export function AdyenSavedCardPayment({
 }: {
 	client: PaymentClient;
 	orderId: string;
+	countryCode: string | null;
 	wallet: PaymentWallet;
 	setting: PaymentSettingAdyen & { public_key?: string | null };
 	amountCents: number;
@@ -86,7 +88,6 @@ export function AdyenSavedCardPayment({
 		if (!clientKey) return;
 		setSubmitted(true);
 		try {
-			await authorizeGiftCards();
 			const session = await client.payment_sessions.create({
 				amount_cents: amountCents,
 				client_data: {
@@ -111,6 +112,8 @@ export function AdyenSavedCardPayment({
 			});
 			const auth = await pollAuthorization(client, created.id);
 
+			// The gift cards wait for Adyen to accept the card. After a 3-D Secure
+			// step that happens in another component, so placement authorizes them.
 			const action = adyenAction(auth);
 			if (action) {
 				onActionRequired({ action, sessionId: session.id, clientKey });
@@ -126,6 +129,11 @@ export function AdyenSavedCardPayment({
 				throw new Error(
 					typeof refusal === "string" ? refusal : `Payment ${auth.status}.`,
 				);
+			}
+			try {
+				await authorizeGiftCards();
+			} catch {
+				/* best-effort; placement will surface any real problem */
 			}
 			onAuthorized();
 		} catch (e) {
@@ -154,7 +162,7 @@ export function AdyenSavedCardPayment({
 				</button>
 			</div>
 			<AdyenWalletCvcStep
-				orderId={orderId}
+				countryCode={countryCode}
 				storedPaymentMethodId={wallet.payment_token}
 				brand={adyenWalletBrand(wallet)}
 				clientKey={clientKey}

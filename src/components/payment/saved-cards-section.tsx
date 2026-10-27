@@ -1,5 +1,5 @@
 import type { PaymentSetting, PaymentWallet } from "@commercelayer/sdk";
-import { cardDisplay } from "@/lib/payment-labels";
+import { cardDisplay, paypalAccount } from "@/lib/payment-labels";
 
 /** Human gateway name + badge colours, from the payment_setting type. */
 function gatewayBadge(type: string | undefined): {
@@ -11,6 +11,10 @@ function gatewayBadge(type: string | undefined): {
 			return { label: "Stripe", className: "bg-indigo-100 text-indigo-700" };
 		case "payment_setting_adyens":
 			return { label: "Adyen", className: "bg-emerald-100 text-emerald-700" };
+		case "payment_setting_braintrees":
+			return { label: "Braintree", className: "bg-sky-100 text-sky-700" };
+		case "payment_setting_paypals":
+			return { label: "PayPal", className: "bg-blue-100 text-blue-700" };
 		default:
 			return null;
 	}
@@ -46,6 +50,7 @@ export function SavedCardsSection({
 			<ul className="flex flex-col gap-2">
 				{paymentWallets.map((wallet) => {
 					const { brand, last4, exp } = cardDisplay(wallet);
+					const account = paypalAccount(wallet);
 					// The included payment_setting resolves to the base type, so derive
 					// the gateway by matching the setting id against the market's settings.
 					const setting = availablePaymentSettings.find(
@@ -60,7 +65,7 @@ export function SavedCardsSection({
 							className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3"
 						>
 							<span className="text-sm font-medium">
-								{brand} •••• {last4}
+								{account ?? `${brand} •••• ${last4}`}
 							</span>
 							{badge && (
 								<span

@@ -36,9 +36,12 @@ export type GatewayPaymentProps = {
 	 * (Adyen's advanced flow creates it when the card is submitted). The
 	 * checkout locks the amount meanwhile, since the form was built for it. */
 	onFormOpenChange?: (open: boolean) => void;
-	/** Authorizes the gift cards applied to the order. Call it right before the
-	 * method's own authorization, so a declined card leaves no gift card
-	 * debited. */
+	/** Authorizes the gift cards applied to the order. Call it only once the
+	 * gateway has accepted the method's payment, so a declined card leaves no
+	 * gift card debited: when the gateway decides in the browser (Stripe's
+	 * `confirmPayment`, the Adyen Drop-in), that is before the CL authorization
+	 * is created; when CL relays the authorization to the gateway, after it has
+	 * succeeded. */
 	authorizeGiftCards: () => Promise<void>;
 	/** The session is authorized: the checkout refreshes the order and places
 	 * it once nothing is left to pay. */

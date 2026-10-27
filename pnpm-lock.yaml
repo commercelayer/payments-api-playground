@@ -12,14 +12,17 @@ importers:
         specifier: ^6.46.0
         version: 6.46.0
       '@commercelayer/js-auth':
-        specifier: ^7
-        version: 7.4.2
+        specifier: ^8.0.1
+        version: 8.0.1
       '@commercelayer/sdk':
-        specifier: ^8.0.0
-        version: 8.0.0
+        specifier: ^8.0.2
+        version: 8.0.2
       '@mollie/api-client':
         specifier: ^4.6.0
         version: 4.6.0
+      '@paypal/paypal-js':
+        specifier: ^11.2.0
+        version: 11.2.0
       '@stripe/react-stripe-js':
         specifier: ^6.12.0
         version: 6.12.0(@stripe/stripe-js@9.17.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -178,12 +181,12 @@ packages:
   '@braintree/wrap-promise@2.1.0':
     resolution: {integrity: sha512-UIrJB+AfKU0CCfbMoWrsGpd2D/hBpY/SGgFI6WRHPOwhaZ3g9rz1weiJ6eb6L9KgVyunT7s2tckcPkbHw+NzeA==}
 
-  '@commercelayer/js-auth@7.4.2':
-    resolution: {integrity: sha512-ifRcoAL1R7o5AU5w4bgmSnNMEWXDc11A+yZwAAZMEkAYrrsaud1X/3xmgY1e0yIXK8AAdIiqfW/Rm/4DdWwAQA==}
+  '@commercelayer/js-auth@8.0.1':
+    resolution: {integrity: sha512-5lt18iBdvvSsjIgLXvfkdEWGyW/f92ulTFu8y8MzkUSdBQS5wjXyHRexpZeDd4/UTn9jBp4znjqPiHOPi9g+FQ==}
     engines: {node: '>=20.0.0'}
 
-  '@commercelayer/sdk@8.0.0':
-    resolution: {integrity: sha512-cdlMwi3wvK79hs9LTlE8nLsEx7JM1JNPJmtOCDRNzjG/sUiezfO96qDbQmP1Qd2PtUtapcAEqUgDmj59rtGlVw==}
+  '@commercelayer/sdk@8.0.2':
+    resolution: {integrity: sha512-OdKFC4qDUvQDeNpYRi+wChQFqktc74sFaQxK8NpaEeGx8mkepribmP+pOI0d7Xy1GdeExv5D5es9ZxRenLY0vA==}
     engines: {node: '>=20'}
 
   '@emnapi/runtime@1.11.3':
@@ -434,6 +437,9 @@ packages:
 
   '@paypal/paypal-js@11.0.0':
     resolution: {integrity: sha512-V1xjR8oTPRU55V11OzsUd2wXE9QUTqs8ybPcgtkp4rVN+XB05taMFzn5nfhsK+LlTCehs07IfHSdXJdjXXgXYQ==}
+
+  '@paypal/paypal-js@11.2.0':
+    resolution: {integrity: sha512-/qFVbiz/+9W8bW680g5M72cftZBvpSL7RKnPx5YLxgncjJKZovCL2FbW2Y2s5Jn/zZvrCJIL4TcVztPFOk6aJA==}
 
   '@playwright/test@1.63.0':
     resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
@@ -1165,9 +1171,9 @@ snapshots:
 
   '@braintree/wrap-promise@2.1.0': {}
 
-  '@commercelayer/js-auth@7.4.2': {}
+  '@commercelayer/js-auth@8.0.1': {}
 
-  '@commercelayer/sdk@8.0.0': {}
+  '@commercelayer/sdk@8.0.2': {}
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -1347,6 +1353,10 @@ snapshots:
       typescript: 4.9.5
 
   '@paypal/paypal-js@11.0.0':
+    dependencies:
+      promise-polyfill: 8.3.0
+
+  '@paypal/paypal-js@11.2.0':
     dependencies:
       promise-polyfill: 8.3.0
 
