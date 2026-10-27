@@ -640,6 +640,13 @@ export class CheckoutPage {
 		await challenge.getByRole("button", { name: "SUBMIT" }).click();
 	}
 
+	/** The id of the order on the current checkout page (`/orders/[id]`). */
+	orderId(): string {
+		const orderId = new URL(this.page.url()).pathname.split("/").pop();
+		if (!orderId) throw new Error("Not on an order page.");
+		return orderId;
+	}
+
 	/**
 	 * Raise the shirt quantity through the API until the order total reaches
 	 * `minCents`, then reload the checkout and restore the shipping method the
@@ -648,9 +655,7 @@ export class CheckoutPage {
 	 * needs an order priced into that band.
 	 */
 	async raiseTotalTo(minCents: number): Promise<void> {
-		const orderId = new URL(this.page.url()).pathname.split("/").pop();
-		if (!orderId) throw new Error("Not on an order page.");
-		await raiseOrderTotalTo(orderId, minCents);
+		await raiseOrderTotalTo(this.orderId(), minCents);
 		await this.page.reload();
 		await this.selectFirstShippingMethod();
 	}

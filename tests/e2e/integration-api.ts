@@ -50,6 +50,95 @@ export async function fetchOrderSubscriptionState(orderId: string) {
 }
 
 /**
+ * The payment_wallet linked to one of the order's payment sessions, or null
+ * when none is. CL links it while processing the authorization of a session
+ * that asked to store the card, whether it creates a wallet or reuses the
+ * customer's existing one for the same card or account.
+ */
+export async function fetchOrderWalletId(
+	orderId: string,
+): Promise<string | null> {
+	const client = await integrationClient();
+	const order = await client.orders.retrieve(orderId, {
+		include: ["payment_sessions.payment_wallet"],
+	});
+	const session = (order.payment_sessions ?? []).find((s) => s.payment_wallet);
+	return session?.payment_wallet?.id ?? null;
+}
+
+/**
+ * Cancels what the e2e customer (`CL_CUSTOMER_EMAIL`) gained since `since`:
+ * order subscriptions first, so none is left to renew with a wallet about to
+ * go, then payment wallets. Returns how many of each were cancelled and the
+ * ids that could not be.
+ */
+export async function cancelCustomerDataSince(since: Date): Promise<{
+	subscriptions: number;
+	wallets: number;
+	failed: string[];
+}> {
+	const email = process.env.CL_CUSTOMER_EMAIL;
+	if (!email) throw new Error("Missing CL_CUSTOMER_EMAIL");
+	const client = await integrationClient();
+	const [customer] = await client.customers.list({
+		filters: { email_eq: email },
+	});
+	const result = { subscriptions: 0, wallets: 0, failed: [] as string[] };
+	if (!customer) return result;
+
+	const filters = {
+		customer_id_eq: customer.id,
+		created_at_gt: since.toISOString(),
+	};
+	// Collect every id before writing: a cancelled record leaves the filtered
+	// list, which would shift the pages under a loop that cancels as it reads.
+	const collect = async (
+		list: (
+			page: number,
+		) => Promise<{ id: string }[] & { meta: { pageCount: number } }>,
+	) => {
+		const ids: string[] = [];
+		for (let page = 1; ; page++) {
+			const records = await list(page);
+			ids.push(...records.map((r) => r.id));
+			if (page >= records.meta.pageCount) return ids;
+		}
+	};
+	const subscriptionIds = await collect((pageNumber) =>
+		client.order_subscriptions.list({
+			filters: { ...filters, status_not_eq: "cancelled" },
+			pageSize: 25,
+			pageNumber,
+		}),
+	);
+	const walletIds = await collect((pageNumber) =>
+		client.payment_wallets.list({
+			filters: { ...filters, status_not_eq: "canceled" },
+			pageSize: 25,
+			pageNumber,
+		}),
+	);
+
+	for (const id of subscriptionIds) {
+		try {
+			await client.order_subscriptions.update({ id, _cancel: true });
+			result.subscriptions++;
+		} catch {
+			result.failed.push(`order_subscriptions/${id}`);
+		}
+	}
+	for (const id of walletIds) {
+		try {
+			await client.payment_wallets.update({ id, _cancel: true });
+			result.wallets++;
+		} catch {
+			result.failed.push(`payment_wallets/${id}`);
+		}
+	}
+	return result;
+}
+
+/**
  * The order's gift card sessions, each with its authorization status (null
  * when it has none). A gift card is debited the moment it is authorized, so an
  * authorization here means its balance has been spent on this order.

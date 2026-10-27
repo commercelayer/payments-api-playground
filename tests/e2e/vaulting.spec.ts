@@ -1,22 +1,32 @@
-import type { Page } from "@playwright/test";
 import { CheckoutPage } from "./checkout-page";
 import { expect, test } from "./fixtures";
+import { fetchOrderWalletId } from "./integration-api";
 
 /**
  * Card storing through the session's `vaulting` flag.
  *
  * The storefront only asks for the card to be stored; CL stores it during the
  * charge and creates the payment_wallet itself, so nothing here writes a wallet.
- * What proves it worked is the wallet showing up on the customer afterwards —
- * as a saved card on the next checkout, or as the instrument that activates a
- * subscription created from the same order.
+ * What proves it worked is a wallet linked to the order's payment session, read
+ * back with an integration token, or the wallet activating a subscription
+ * created from the same order. The saved cards list is no proof: a card or
+ * account the customer already saved reuses its wallet and leaves the list as
+ * it was.
  */
 
-/** Saved cards offered on the checkout page, one row per wallet. */
-async function savedCardCount(page: Page): Promise<number> {
-	// Wallets are fetched after mount, so give the list a moment to arrive.
-	await page.waitForTimeout(2_000);
-	return page.getByRole("button", { name: "Remove saved card" }).count();
+/**
+ * Waits for CL to link a payment_wallet to the order's payment session. It
+ * does so while processing the authorization, which can land a little after
+ * placement.
+ */
+async function expectWalletLinked(checkout: CheckoutPage): Promise<void> {
+	const orderId = checkout.orderId();
+	await expect
+		.poll(() => fetchOrderWalletId(orderId), {
+			timeout: 60_000,
+			intervals: [2_000],
+		})
+		.not.toBeNull();
 }
 
 /** The PayPal tests log in to PayPal's sandbox as a buyer in a popup. */
@@ -44,7 +54,6 @@ test.describe("vaulting", () => {
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
-		const before = await savedCardCount(page);
 
 		await checkout.selectMethod("payment_setting_stripes");
 		await page
@@ -56,17 +65,7 @@ test.describe("vaulting", () => {
 		await checkout.authorize();
 		await checkout.expectPlaced();
 
-		// The wallet is linked when CL processes the authorization, which can land
-		// a little after placement.
-		await expect
-			.poll(
-				async () => {
-					await checkout.create();
-					return savedCardCount(page);
-				},
-				{ timeout: 60_000, intervals: [2_000] },
-			)
-			.toBeGreaterThan(before);
+		await expectWalletLinked(checkout);
 	});
 
 	test("does not save a Stripe card when the shopper leaves it unticked", async ({
@@ -75,12 +74,10 @@ test.describe("vaulting", () => {
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
-		const before = await savedCardCount(page);
 
 		await payWithStripe(checkout);
 
-		await checkout.create();
-		expect(await savedCardCount(page)).toBe(before);
+		expect(await fetchOrderWalletId(checkout.orderId())).toBeNull();
 	});
 
 	test("activates a weekly subscription paid with a new Stripe card", async ({
@@ -165,7 +162,6 @@ test.describe("vaulting", () => {
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
-		const before = await savedCardCount(page);
 
 		await checkout.selectMethod("payment_setting_paypals");
 		await page
@@ -175,15 +171,7 @@ test.describe("vaulting", () => {
 		await checkout.approveInPayPal();
 		await checkout.expectPlaced();
 
-		await expect
-			.poll(
-				async () => {
-					await checkout.create();
-					return savedCardCount(page);
-				},
-				{ timeout: 60_000, intervals: [2_000] },
-			)
-			.toBeGreaterThan(before);
+		await expectWalletLinked(checkout);
 	});
 
 	test("activates a weekly subscription paid with a new PayPal account", async ({
@@ -223,6 +211,8 @@ test.describe("vaulting", () => {
 	});
 
 	test("pays again with a saved PayPal account", async ({ page }) => {
+		// Pays with the account the PayPal tests above saved in this run.
+		skipWithoutPayPalBuyer();
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
@@ -264,7 +254,6 @@ test.describe("vaulting", () => {
 		const checkout = new CheckoutPage(page);
 		await checkout.loginAsCustomer();
 		await checkout.create();
-		const before = await savedCardCount(page);
 
 		await checkout.selectMethod("payment_setting_braintrees");
 		await page
@@ -275,17 +264,9 @@ test.describe("vaulting", () => {
 		await checkout.authorize();
 		await checkout.expectPlaced();
 
-		// CL links the wallet while it processes the authorization, from the
-		// payment method Braintree vaulted after transacting.
-		await expect
-			.poll(
-				async () => {
-					await checkout.create();
-					return savedCardCount(page);
-				},
-				{ timeout: 60_000, intervals: [2_000] },
-			)
-			.toBeGreaterThan(before);
+		// CL links the wallet from the payment method Braintree vaulted after
+		// transacting.
+		await expectWalletLinked(checkout);
 	});
 
 	test("activates a weekly subscription paid with a new Braintree card", async ({
