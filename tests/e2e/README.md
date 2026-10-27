@@ -23,7 +23,21 @@ pnpm test:e2e --ui             # interactive UI mode
 `.env.local` itself), runs single-worker Chromium, and traces on first retry.
 
 Orders can't be deleted in Commerce Layer and this points at a **test org**, so
-seeded test orders simply accumulate — there is no teardown.
+seeded test orders simply accumulate.
+
+What would keep acting after the run is cleaned up instead. Left active, a
+weekly subscription renews in the sandbox every week, with charges on the
+gateways' test accounts. `global-setup.ts` records when the run starts, and
+its teardown cancels the order subscriptions and payment wallets the e2e
+customer (`CL_CUSTOMER_EMAIL`) gained since then, subscriptions first:
+
+- Records created before the run are left alone. The specs that pay with a
+  saved card therefore use one saved earlier in the same run, so run them with
+  the specs that save it.
+- A cancel the API refuses (e.g. the gateway can't remove the stored method) is
+  logged with its reason and doesn't stop the others.
+- `E2E_KEEP_DATA=1 pnpm test:e2e` skips the cleanup, e.g. to inspect a failed
+  run.
 
 ## Layout & the reusable entry point
 
@@ -40,6 +54,8 @@ tests/e2e/
   adyen-paypal.spec.ts        # PayPal popup through the Adyen Drop-in (needs E2E_PAYPAL_*)
   braintree-checkout.spec.ts  # Braintree Hosted Fields (3DS challenge, frictionless, decline + retry) and Drop-in
   paypal-checkout.spec.ts     # PayPal popup through a PayPal payment setting (needs E2E_PAYPAL_*)
+  saved-card-3ds.spec.ts      # 3-D Secure challenge when saving a card and when paying with it again (Stripe, Adyen)
+  global-setup.ts             # records the run start; its teardown cancels the run's subscriptions and wallets
 ```
 
 Gift cards are created via the debug "Gift Cards" panel on the order page

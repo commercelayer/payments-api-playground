@@ -185,7 +185,9 @@ Keep it on your machine, or behind access control.
 suite: it runs against our own sandbox organization and relies on its SKU,
 prices, subscription model and gateway accounts, so it isn't expected to pass
 against another organization. It is still a useful reference for driving the
-gateways' forms. See [`tests/e2e/README.md`](tests/e2e/README.md).
+gateways' forms. Each run cancels the subscriptions and saved cards it created
+for the test customer, so renewals don't pile up in the sandbox. See
+[`tests/e2e/README.md`](tests/e2e/README.md).
 
 ## License
 
