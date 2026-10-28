@@ -41,5 +41,9 @@ export default defineConfig({
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // `varlock run` starts `next dev` in its own process group, so the default
+    // SIGKILL to the server's group never reaches it and leaves it holding the
+    // port. SIGTERM is forwarded by varlock and stops `next dev` too.
+    gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
   },
 })
