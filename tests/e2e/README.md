@@ -54,7 +54,7 @@ tests/e2e/
   adyen-paypal.spec.ts        # PayPal popup through the Adyen Drop-in (needs E2E_PAYPAL_*)
   braintree-checkout.spec.ts  # Braintree Hosted Fields (3DS challenge, frictionless, decline + retry) and Drop-in
   paypal-checkout.spec.ts     # PayPal popup through a PayPal payment setting (needs E2E_PAYPAL_*)
-  checkout-com-checkout.spec.ts  # Checkout.com Flow (3DS challenge, frictionless, failed challenge + retry)
+  checkout-com-checkout.spec.ts  # Checkout.com Flow (3DS challenge, frictionless, failed challenge + retry, not offered for subscriptions)
   saved-card-3ds.spec.ts      # 3-D Secure challenge when saving a card and when paying with it again (Stripe, Adyen)
   global-setup.ts             # records the run start; its teardown cancels the run's subscriptions and wallets
 ```

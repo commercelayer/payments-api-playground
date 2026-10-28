@@ -19,9 +19,11 @@ export type CheckoutComReturn = {
 };
 
 /** Whether the page was reached by Checkout.com sending the shopper back, and
- * through which URL: Flow leaves the page for a 3-D Secure challenge (or a
- * redirect payment method) and comes back to `success_url` once the payment
- * is approved, to `failure_url` otherwise. */
+ * through which URL. Flow can leave the page for a 3-D Secure challenge (a
+ * failed one always has, so far) or a redirect payment method, and comes back
+ * to `success_url` once the payment is approved, to `failure_url` otherwise.
+ * Checkout.com appends its own parameters, `cko-payment-id` among them, to
+ * ours. */
 export function checkoutComReturn(
 	searchParams: URLSearchParams,
 ): CheckoutComReturn | null {

@@ -20,17 +20,22 @@ import { CheckoutComFlowStep } from "./flow-step";
  *    `client_data.payment_method` and the CL payment_authorization is
  *    created. It submits nothing: CL reads that payment from Checkout.com and
  *    copies it into the authorization's `response_data`
- *    (`authorization.ts`). After a 3-D Secure challenge the same happens on
- *    the order page (`redirect-return.ts`).
+ *    (`authorization.ts`). Flow may run a 3-D Secure challenge inside the
+ *    page or leave it; when it leaves, the same happens on the order page
+ *    the shopper comes back to (`redirect-return.ts`).
  *
  * Flow's `handleSubmit` route, its `session_data` token in `client_data`, is
  * not the way: the authorization never settles.
+ *
+ * Cards aren't stored yet, so on an order that will mint a subscription the
+ * method says so instead of offering Confirm.
  */
 export function CheckoutComPayment({
 	client,
 	orderId,
 	setting,
 	amountCents,
+	mustSaveCard,
 	session,
 	onSessionChange,
 	authorizeGiftCards,
@@ -86,6 +91,15 @@ export function CheckoutComPayment({
 		} catch (e) {
 			setAuthorizeError(errorMessage(e, "Payment authorization failed."));
 		}
+	}
+
+	if (!session && mustSaveCard) {
+		return (
+			<p className="mt-2 text-xs text-gray-500">
+				Checkout.com can't save cards here yet, and the subscription needs one
+				to charge the orders after this one. Pay with another method.
+			</p>
+		);
 	}
 
 	if (!session) {

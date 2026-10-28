@@ -1,3 +1,4 @@
+import { CheckoutPage } from "./checkout-page";
 import { expect, test } from "./fixtures";
 
 /**
@@ -60,4 +61,25 @@ test("a failed Checkout.com 3-D Secure challenge leaves the payment open for a r
 	await checkout.submitCheckoutCom();
 
 	await checkout.expectPlaced();
+});
+
+/**
+ * Checkout.com doesn't store cards yet, and an order that mints a subscription
+ * needs a stored card for the orders after it, so the method isn't offered.
+ */
+test("Checkout.com is not offered for an order that creates a subscription", async ({
+	page,
+}) => {
+	const checkout = new CheckoutPage(page);
+	await checkout.loginAsCustomer();
+	await checkout.create();
+	await checkout.selectFrequency("Every week");
+	await checkout.selectFirstShippingMethod();
+
+	await checkout.selectMethod("payment_setting_checkout_coms");
+
+	await expect(
+		page.getByText("Checkout.com can't save cards here yet"),
+	).toBeVisible();
+	await expect(page.getByRole("button", { name: "Confirm" })).toHaveCount(0);
 });

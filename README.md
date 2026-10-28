@@ -47,7 +47,7 @@ your own integration.
 | `src/gateways/adyen/` | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout |
 | `src/gateways/braintree/` | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser |
 | `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
-| `src/gateways/checkout-com/` | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page. `STATUS.md` lists what is not done yet |
+| `src/gateways/checkout-com/` | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page |
 | `src/gateways/mollie/` | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`) |
 | `src/gateways/manual/` | Manual payment: session and authorization in one step |
 | `src/gateways/types.ts` | The contract between the checkout and a gateway module |
@@ -180,8 +180,8 @@ On a Checkout.com account with processing channels, payment sessions are refused
 with `processing_channel_id_required` until the account has a default
 processing channel.
 
-Stored cards and subscriptions don't work with Checkout.com yet: see
-`src/gateways/checkout-com/STATUS.md`.
+Checkout.com doesn't store cards yet, so it isn't offered on an order that
+creates a subscription.
 
 ## Why not a public deploy
 
