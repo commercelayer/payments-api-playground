@@ -1,0 +1,133 @@
+"use client";
+
+import type { PaymentSettingCheckoutCom } from "@commercelayer/sdk";
+import { useState } from "react";
+import type { GatewayPaymentProps } from "@/gateways/types";
+import { errorMessage } from "@/lib/payments";
+import { authorizeCheckoutComPayment } from "./authorization";
+import { CheckoutComFlowStep } from "./flow-step";
+
+/**
+ * Card and wallet payment with Checkout.com Flow, from the shopper's choice to
+ * an authorized payment_session.
+ *
+ * 1. Confirm creates the payment_session, with the `success_url` and
+ *    `failure_url` Checkout.com requires in its `client_data`. CL creates a
+ *    Checkout.com payment session and returns it in `response_data`.
+ * 2. Flow mounts on that payment session, collects the payment details and
+ *    submits the payment to Checkout.com itself, with its own pay button.
+ * 3. Once Checkout.com approves it, its payment id goes into the session's
+ *    `client_data.payment_method` and the CL payment_authorization is
+ *    created. It submits nothing: CL reads that payment from Checkout.com and
+ *    copies it into the authorization's `response_data`
+ *    (`authorization.ts`). Flow may run a 3-D Secure challenge inside the
+ *    page or leave it; when it leaves, the same happens on the order page
+ *    the shopper comes back to (`redirect-return.ts`).
+ *
+ * Flow's `handleSubmit` route, its `session_data` token in `client_data`, is
+ * not the way: the authorization never settles.
+ *
+ * Cards aren't stored yet, so on an order that will mint a subscription the
+ * method says so instead of offering Confirm.
+ */
+export function CheckoutComPayment({
+	client,
+	orderId,
+	setting,
+	amountCents,
+	mustSaveCard,
+	session,
+	onSessionChange,
+	authorizeGiftCards,
+	onAuthorized,
+	onCancel,
+}: GatewayPaymentProps) {
+	const [confirming, setConfirming] = useState(false);
+	const [confirmError, setConfirmError] = useState<string | null>(null);
+	const [authorizeError, setAuthorizeError] = useState<string | null>(null);
+	const { public_key: publicKey } = setting as PaymentSettingCheckoutCom;
+
+	function returnUrls() {
+		const orderUrl = `${window.location.origin}/orders/${orderId}`;
+		return {
+			success_url: `${orderUrl}?checkout_com_return=success`,
+			failure_url: `${orderUrl}?checkout_com_return=failure`,
+		};
+	}
+
+	async function handleConfirm() {
+		if (amountCents == null) return;
+		setConfirming(true);
+		setConfirmError(null);
+		try {
+			onSessionChange(
+				await client.payment_sessions.create({
+					amount_cents: amountCents,
+					client_data: returnUrls(),
+					payment_setting: client.payment_settings.relationship(setting.id),
+					order: client.orders.relationship(orderId),
+				}),
+			);
+		} catch (e) {
+			setConfirmError(errorMessage(e, "Failed to confirm payment."));
+		} finally {
+			setConfirming(false);
+		}
+	}
+
+	/** Called once Flow has submitted the payment and Checkout.com approved
+	 * it. */
+	async function handleCompleted(paymentId: string) {
+		if (!session) return;
+		setAuthorizeError(null);
+		try {
+			await authorizeCheckoutComPayment({
+				client,
+				session,
+				paymentId,
+				authorizeGiftCards,
+			});
+			onAuthorized();
+		} catch (e) {
+			setAuthorizeError(errorMessage(e, "Payment authorization failed."));
+		}
+	}
+
+	if (!session && mustSaveCard) {
+		return (
+			<p className="mt-2 text-xs text-gray-500">
+				Checkout.com can't save cards here yet, and the subscription needs one
+				to charge the orders after this one. Pay with another method.
+			</p>
+		);
+	}
+
+	if (!session) {
+		return (
+			<div className="mt-2 flex flex-col gap-2">
+				<button
+					type="button"
+					onClick={handleConfirm}
+					disabled={amountCents == null || confirming}
+					className="cursor-pointer self-start rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{confirming ? "Confirming…" : "Confirm"}
+				</button>
+				{confirmError && <p className="text-xs text-red-500">{confirmError}</p>}
+			</div>
+		);
+	}
+
+	return (
+		<div className="mt-3">
+			<CheckoutComFlowStep
+				pendingSession={session}
+				publicKey={publicKey}
+				authorizeError={authorizeError}
+				onCompleted={handleCompleted}
+				onError={setAuthorizeError}
+				onReset={onCancel}
+			/>
+		</div>
+	);
+}

@@ -11,12 +11,15 @@ importers:
       '@adyen/adyen-web':
         specifier: ^6.46.0
         version: 6.46.0
+      '@checkout.com/checkout-web-components':
+        specifier: ^1.14.0
+        version: 1.14.0
       '@commercelayer/js-auth':
         specifier: ^8.0.1
         version: 8.0.1
       '@commercelayer/sdk':
-        specifier: ^8.0.2
-        version: 8.0.2
+        specifier: ^8.0.3
+        version: 8.0.3
       '@mollie/api-client':
         specifier: ^4.6.0
         version: 4.6.0
@@ -181,12 +184,15 @@ packages:
   '@braintree/wrap-promise@2.1.0':
     resolution: {integrity: sha512-UIrJB+AfKU0CCfbMoWrsGpd2D/hBpY/SGgFI6WRHPOwhaZ3g9rz1weiJ6eb6L9KgVyunT7s2tckcPkbHw+NzeA==}
 
+  '@checkout.com/checkout-web-components@1.14.0':
+    resolution: {integrity: sha512-1AgCVNkfcnF8JjG6dzfzC3Z2OIIghREv2LOFxiywUQEQt23uV4D6t1r3rTi5Nzil0qofol1AoDh+TCxXGY3KUQ==}
+
   '@commercelayer/js-auth@8.0.1':
     resolution: {integrity: sha512-5lt18iBdvvSsjIgLXvfkdEWGyW/f92ulTFu8y8MzkUSdBQS5wjXyHRexpZeDd4/UTn9jBp4znjqPiHOPi9g+FQ==}
     engines: {node: '>=20.0.0'}
 
-  '@commercelayer/sdk@8.0.2':
-    resolution: {integrity: sha512-OdKFC4qDUvQDeNpYRi+wChQFqktc74sFaQxK8NpaEeGx8mkepribmP+pOI0d7Xy1GdeExv5D5es9ZxRenLY0vA==}
+  '@commercelayer/sdk@8.0.3':
+    resolution: {integrity: sha512-vb8FbdaLswYuib5V/AUbQnvWgdBEKV/lEpccLFgHUPAInl/AxaB92WgcPZbwvm33Dv1e9HXq5rPOOBsSclwwzA==}
     engines: {node: '>=20'}
 
   '@emnapi/runtime@1.11.3':
@@ -1171,9 +1177,11 @@ snapshots:
 
   '@braintree/wrap-promise@2.1.0': {}
 
+  '@checkout.com/checkout-web-components@1.14.0': {}
+
   '@commercelayer/js-auth@8.0.1': {}
 
-  '@commercelayer/sdk@8.0.2': {}
+  '@commercelayer/sdk@8.0.3': {}
 
   '@emnapi/runtime@1.11.3':
     dependencies:

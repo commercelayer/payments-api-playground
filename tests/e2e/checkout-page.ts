@@ -648,6 +648,107 @@ export class CheckoutPage {
 	}
 
 	/**
+	 * The input inside one of Flow's card fields. Each lives in its own iframe,
+	 * named after the field plus a per-mount suffix (`card-number__<uuid>`).
+	 */
+	private checkoutComField(field: string): Locator {
+		return this.page
+			.frameLocator(`iframe[name^="${field}__"]`)
+			.locator(`#${field}`);
+	}
+
+	/**
+	 * Type one Flow field and make sure the value actually landed. Same
+	 * cross-origin iframe problem as Adyen and Braintree, but Flow marks no
+	 * complete field, so the read-back is compared instead: digits only, since
+	 * Flow formats the number and the expiry date.
+	 */
+	private async fillCheckoutComField(
+		field: string,
+		value: string,
+	): Promise<void> {
+		const input = this.checkoutComField(field);
+		const normalize = (v: string) =>
+			/\d/.test(value) ? v.replace(/\D/g, "") : v;
+
+		for (let attempt = 1; attempt <= 3; attempt++) {
+			await input.click();
+			const current = await input.inputValue().catch(() => "");
+			for (let i = 0; i < current.length; i++) await input.press("Backspace");
+
+			await input.pressSequentially(value, { delay: 30 });
+			if (normalize(await input.inputValue()) === value) return;
+		}
+		await expect(input).toHaveValue(value);
+	}
+
+	/**
+	 * Fill Flow's card form. The default card makes the issuer ask for a 3-D
+	 * Secure challenge (complete it with `completeCheckoutComChallenge`);
+	 * `4485040371536584` authenticates frictionlessly.
+	 */
+	async fillCheckoutComTestCard(number = "4242424242424242"): Promise<void> {
+		await expect(this.checkoutComField("card-number")).toBeVisible({
+			timeout: 30_000,
+		});
+		await this.fillCheckoutComField("cardholder-name", "John Doe");
+		await this.fillCheckoutComField("card-number", number);
+		await this.fillCheckoutComField("card-expiry-date", "1230");
+		await this.fillCheckoutComField("card-cvv", "100");
+	}
+
+	/** Submit Flow (its own "Pay" button sends the payment to Checkout.com). */
+	async submitCheckoutCom(): Promise<void> {
+		await this.page.getByRole("button", { name: "Pay", exact: true }).click();
+	}
+
+	/**
+	 * The sandbox issuer's 3-D Secure challenge page. It is nested inside
+	 * another Checkout.com iframe, so it is found by its URL rather than with a
+	 * frame locator.
+	 */
+	private async checkoutComChallenge(): Promise<Frame> {
+		let frame: Frame | undefined;
+		await expect
+			.poll(
+				() => {
+					frame = this.page
+						.frames()
+						.find((f) => f.url().includes("/simulator/acs/challenge"));
+					return frame != null;
+				},
+				{ timeout: 30_000 },
+			)
+			.toBe(true);
+		return frame as Frame;
+	}
+
+	/** Pass the sandbox issuer's challenge with its published password. */
+	async completeCheckoutComChallenge(): Promise<void> {
+		const challenge = await this.checkoutComChallenge();
+		await challenge.getByRole("textbox").fill("Checkout1!");
+		await challenge.getByRole("button", { name: "Continue" }).click();
+	}
+
+	/**
+	 * Fail the sandbox issuer's challenge: it allows three password attempts,
+	 * then declines the payment and Checkout.com sends the shopper to the
+	 * session's `failure_url`.
+	 */
+	async failCheckoutComChallenge(): Promise<void> {
+		const challenge = await this.checkoutComChallenge();
+		for (let remaining = 2; remaining >= 0; remaining--) {
+			await challenge.getByRole("textbox").fill("wrong");
+			await challenge.getByRole("button", { name: "Continue" }).click();
+			if (remaining > 0) {
+				await expect(
+					challenge.getByText(`${remaining} attempt(s) remaining`),
+				).toBeVisible();
+			}
+		}
+	}
+
+	/**
 	 * Raise the shirt quantity through the API until the order total reaches
 	 * `minCents`, then reload the checkout and restore the shipping method the
 	 * line item write dropped. Braintree's sandbox decides the outcome from the

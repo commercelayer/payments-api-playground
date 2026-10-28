@@ -14,6 +14,8 @@ export function labelForType(type: string): string {
 			return "Braintree";
 		case "payment_setting_paypals":
 			return "PayPal";
+		case "payment_setting_checkout_coms":
+			return "Checkout.com";
 		default:
 			return type;
 	}
