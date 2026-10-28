@@ -11,6 +11,8 @@ const EXPECTED_METHOD_TYPES = [
 	"payment_setting_externals", // Mollie
 	"payment_setting_adyens", // Adyen
 	"payment_setting_braintrees", // Braintree
+	"payment_setting_paypals", // PayPal
+	"payment_setting_checkout_coms", // Checkout.com
 ];
 
 test("checkout shows the available payment methods", async ({ checkout }) => {

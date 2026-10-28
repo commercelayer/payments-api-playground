@@ -54,6 +54,7 @@ tests/e2e/
   adyen-paypal.spec.ts        # PayPal popup through the Adyen Drop-in (needs E2E_PAYPAL_*)
   braintree-checkout.spec.ts  # Braintree Hosted Fields (3DS challenge, frictionless, decline + retry) and Drop-in
   paypal-checkout.spec.ts     # PayPal popup through a PayPal payment setting (needs E2E_PAYPAL_*)
+  checkout-com-checkout.spec.ts  # Checkout.com Flow (3DS challenge, frictionless, failed challenge + retry)
   saved-card-3ds.spec.ts      # 3-D Secure challenge when saving a card and when paying with it again (Stripe, Adyen)
   global-setup.ts             # records the run start; its teardown cancels the run's subscriptions and wallets
 ```
@@ -154,3 +155,28 @@ Braintree's **duplicate check** rejects the same card for the same amount within
 a short window (`GATEWAY_REJECTED`, which the checkout shows as a decline). Every
 fixture order has the same total, so two tests in one run must not share a card.
 Re-running the spec straight away can trip it as well.
+
+## Checkout.com Flow (gotcha)
+
+Flow mounts each card field in its own iframe, named after the field plus a
+per-mount suffix: `iframe[name^="card-number__"]`, and likewise
+`cardholder-name`, `card-expiry-date` and `card-cvv`. The input inside has the
+same id (`#card-number`). Each frame also carries hidden autofill inputs, which
+the id skips. Flow marks no complete field, so `fillCheckoutComField()` reads the
+value back (digits only, since Flow formats it) and retypes on a mismatch. The
+form has no Authorize button: Flow's own **Pay** button sends the payment
+(`submitCheckoutCom()`).
+
+The 3-D Secure challenge is Checkout.com's simulator, nested inside another
+Checkout.com iframe, so the helpers find it by its URL
+(`/simulator/acs/challenge`). The password is `Checkout1!`
+(`completeCheckoutComChallenge()`). Three wrong passwords decline the payment,
+and Checkout.com sends the whole page to the session's `failure_url`
+(`failCheckoutComChallenge()`).
+
+Test cards (any future expiry, CVV `100`):
+
+| Card | Outcome |
+|---|---|
+| `4242 4242 4242 4242` | 3DS challenge, then authorized |
+| `4485 0403 7153 6584` | frictionless 3DS, authorized |
