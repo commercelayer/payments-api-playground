@@ -132,7 +132,19 @@ usual.
   values are read from the Parameter Store parameter
   `/dev/payments-api-playground` (eu-west-1). Log in first (`aws sso login`).
 - **Without it**, create a `.env.local` with `LOAD_FROM_AWS=false` and the
-  variables you need, copied from `.env.schema`.
+  values you need. `.env.schema` lists and describes every variable: take the
+  names from there, with your own values. For example:
+
+  ```bash
+  LOAD_FROM_AWS=false
+  CL_CLIENT_ID=<sales channel client ID>
+  CL_MARKET_CODE=<market code>
+  CL_INTEGRATION_CLIENT_ID=<integration client ID>
+  CL_INTEGRATION_CLIENT_SECRET=<integration client secret>
+  ```
+
+  Without `LOAD_FROM_AWS=false`, every variable you leave out is looked up on
+  AWS, and `pnpm dev` stops with `awsParam(): Authentication failed`.
 
 `.env.local` is git-ignored and takes precedence over `.env.schema`, also with
 AWS access: use it for your own settings (`DEV_TUNNEL_HOST`,
