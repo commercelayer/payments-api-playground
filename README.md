@@ -23,8 +23,9 @@ your own integration.
 
 - **Checkout with several gateways:** Stripe (Payment Element), Adyen (Drop-in,
   or the Card Component in the advanced flow), Braintree (Hosted Fields or
-  Drop-in), PayPal (its own payment setting, with PayPal's button), Mollie as
-  an external payment setting, and manual payments (wire transfer).
+  Drop-in), PayPal (its own payment setting, with PayPal's button),
+  Checkout.com (Flow), Mollie as an external payment setting, and manual
+  payments (wire transfer).
 - **Split payments:** pay part of the order with one method and the rest with
   another. Each authorized payment session lowers the balance, and the order is
   placed when nothing is left to pay.
@@ -46,6 +47,7 @@ your own integration.
 | `src/gateways/adyen/` | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout |
 | `src/gateways/braintree/` | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser |
 | `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
+| `src/gateways/checkout-com/` | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page. `STATUS.md` lists what is not done yet |
 | `src/gateways/mollie/` | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`) |
 | `src/gateways/manual/` | Manual payment: session and authorization in one step |
 | `src/gateways/types.ts` | The contract between the checkout and a gateway module |
@@ -75,10 +77,11 @@ The playground sells a single SKU on a single market. The organization needs:
 - **The payment settings you want to try**, enabled and listed on the market:
   `payment_setting_stripes`, `payment_setting_adyens`,
   `payment_setting_braintrees`, `payment_setting_paypals`,
-  `payment_setting_externals` (Mollie),
+  `payment_setting_checkout_coms`, `payment_setting_externals` (Mollie),
   `payment_setting_manuals`, and `payment_setting_gift_cards` for gift cards.
   Card gateways need their sandbox credentials and their public key. PayPal
-  needs a sandbox REST app's client ID and secret. Adyen's
+  needs a sandbox REST app's client ID and secret. Checkout.com needs more
+  setup, see [Checkout.com](#checkoutcom). Adyen's
   client key must allow the origin you run the app on, for example
   `http://localhost:3000`.
 - **A customer with a password** (optional), to try stored cards and
@@ -165,6 +168,20 @@ the app, so run it on a public URL (a deploy, or a tunnel with
 
 Then copy the setting's `webhook_endpoint_url` into `CL_WEBHOOK_ENDPOINT_URL`:
 the app forwards Mollie's status changes there.
+
+### Checkout.com
+
+Create the `payment_setting_checkout_coms` with the sandbox account's secret and
+public keys, then call `_provision_webhook` on it
+(`payment_setting_checkout_coms._provision_webhook(id)` in the SDK). That
+creates the webhook on Checkout.com, and the setting turns `active`.
+
+On a Checkout.com account with processing channels, payment sessions are refused
+with `processing_channel_id_required` until the account has a default
+processing channel.
+
+Stored cards and subscriptions don't work with Checkout.com yet: see
+`src/gateways/checkout-com/STATUS.md`.
 
 ## Why not a public deploy
 

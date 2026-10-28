@@ -1,15 +1,15 @@
 # Checkout.com: work in progress
 
-The Checkout.com module works for one-off card payments but is not finished,
-and it is not listed in the README yet. This file records where it stands, so
-the work can be picked up again.
+The Checkout.com module works for one-off card payments but is not finished.
+This file records where it stands, so the work can be picked up again.
 
 ## What works
 
 Card payments through Flow (`@checkout.com/checkout-web-components`), from
 the shopper's choice to a placed order, with and without a 3-D Secure
-challenge, Amex included. `checkout-com-payment.tsx` describes the flow step
-by step.
+challenge, Amex included. A failed challenge leaves the payment open for
+another card. `checkout-com-payment.tsx` describes the flow step by step, and
+`tests/e2e/checkout-com-checkout.spec.ts` covers these cases.
 
 Notes for whoever picks this up:
 
@@ -33,28 +33,30 @@ Notes for whoever picks this up:
   the authorization's `response_data`. Flow's `handleSubmit` route (its
   `session_data` in `client_data`) is not the way: the authorization never
   settles.
-- **3-D Secure return:** after a challenge Flow doesn't call
-  `onPaymentCompleted`. Checkout.com sends the shopper back to `success_url`
-  and appends `cko-payment-session-id`, `cko-session-id` and `cko-payment-id`
-  to our own `checkout_com_return` parameter. The order page then authorizes
-  the session with the payment id from `cko-payment-id` and removes all four
-  parameters from the URL.
+- **3-D Secure:** Flow may run the challenge inside the page, and then calls
+  `onPaymentCompleted` as for any other payment, or leave the page for it.
+  Both have happened with the same test card. When it leaves, Checkout.com
+  sends the shopper back to `success_url` or `failure_url` and appends
+  `cko-payment-session-id`, `cko-session-id` and `cko-payment-id` to our own
+  `checkout_com_return` parameter. On success the order page authorizes the
+  session with the payment id from `cko-payment-id`. Either way it removes
+  all four parameters from the URL.
+- **Failed challenge:** so far it has always left the page, for `failure_url`. The order
+  page shows the error, and Flow mounts again on the same session, where
+  another card can pay. Checkout.com reports the declined payment to CL, which
+  records it as a failed authorization on the session.
 
 ## What is missing
 
-- **Failure return:** the `failure_url` path (a declined or abandoned
-  challenge) has never run.
+- **Successful return from a redirect:** authorizing with `cko-payment-id`
+  has never run. The return to `success_url` itself worked on 2026-10-22, but
+  since then Flow has kept successful challenges inside the page, so neither a
+  manual test nor the e2e spec reaches it.
 - **Stored cards and subscriptions:** not started. That means `vaulting: true`
   on the session, a branch in `handlePayWithWallet`, a badge in
   `saved-cards-section.tsx`, and the `payment_data` shape in `cardDisplay`.
-  The test account's Flow session reports `store_payment_details: disabled`,
-  so the Checkout.com account needs that enabled first.
+  For now a Flow session reports `store_payment_details: disabled` even with
+  `vaulting: true`, so no card gets stored.
 - **Express payments:** Flow offers Apple Pay and Google Pay on this account,
   but only inside the checkout. Showing them on the product page is not
   started.
-- **README:** add Checkout.com to the gateway list, the "Reading the code"
-  table and the organization setup (keys, `_provision_webhook`, processing
-  channel).
-- **E2E spec:** card entry happens inside Flow's cross-origin iframes, so a
-  Playwright spec has to drive the frames directly, as the Adyen specs do.
-  Until it exists, a person has to enter the card by hand.
