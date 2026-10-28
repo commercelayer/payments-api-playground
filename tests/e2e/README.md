@@ -9,8 +9,8 @@ end to end (order created → payment session → authorization → order placed
 - **This project uses [pnpm](https://pnpm.io/).** Use `pnpm install` / `pnpm add`.
   `npm install` fails here with `Cannot read properties of null (reading 'matches')`
 - The env set up as described in the [main README](../../README.md#configure-and-run):
-  an AWS session that can read the Parameter Store parameter, or the values in
-  `.env.local`.
+  the values in `.env.local`, or `LOAD_FROM_AWS=true` there and an AWS session
+  that can read the Parameter Store parameter.
 - One-time browser install: `pnpm exec playwright install chromium`.
 
 ## Running

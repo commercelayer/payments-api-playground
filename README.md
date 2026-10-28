@@ -128,27 +128,27 @@ every variable, grouped by feature, and `pnpm dev` and the e2e tests load it.
 `next build` and `next start` don't: a deploy reads the process environment as
 usual.
 
-- **With access to our AWS account**, there is nothing to fill in: the sandbox
-  values are read from the Parameter Store parameter
-  `/dev/payments-api-playground` (eu-west-1). Log in first (`aws sso login`).
-- **Without it**, create a `.env.local` with `LOAD_FROM_AWS=false` and the
-  values you need. `.env.schema` lists and describes every variable: take the
-  names from there, with your own values. For example:
+Create a `.env.local` with the values you need. `.env.schema` lists and
+describes every variable: take the names from there, with your own values. For
+example:
 
-  ```bash
-  LOAD_FROM_AWS=false
-  CL_CLIENT_ID=<sales channel client ID>
-  CL_MARKET_CODE=<market code>
-  CL_INTEGRATION_CLIENT_ID=<integration client ID>
-  CL_INTEGRATION_CLIENT_SECRET=<integration client secret>
-  ```
+```bash
+CL_CLIENT_ID=<sales channel client ID>
+CL_MARKET_CODE=<market code>
+CL_INTEGRATION_CLIENT_ID=<integration client ID>
+CL_INTEGRATION_CLIENT_SECRET=<integration client secret>
+```
 
-  Without `LOAD_FROM_AWS=false`, every variable you leave out is looked up on
-  AWS, and `pnpm dev` stops with `awsParam(): Authentication failed`.
+`.env.local` is git-ignored and takes precedence over `.env.schema`.
 
-`.env.local` is git-ignored and takes precedence over `.env.schema`, also with
-AWS access: use it for your own settings (`DEV_TUNNEL_HOST`,
-`NEXT_PUBLIC_CL_DEBUG_REQUESTS`, ...) or to override a sandbox value. In short:
+**Commerce Layer team:** the sandbox values are kept in the Parameter Store
+parameter `/dev/payments-api-playground` (eu-west-1). Put just
+`LOAD_FROM_AWS=true` in `.env.local` and log in (`aws sso login`): every
+variable you don't set in `.env.local` is then read from there. Keep your own
+settings (`DEV_TUNNEL_HOST`, `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, ...) in
+`.env.local`, next to the switch.
+
+In short:
 
 | Group | Variables | Without them |
 |---|---|---|
