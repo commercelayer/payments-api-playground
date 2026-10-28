@@ -19,3 +19,15 @@ export function customerIdFromToken(accessToken: string): string | null {
   }
   return null
 }
+
+/** The slug of the organization a sales-channel token belongs to, or null for
+ * any other token. */
+export function organizationSlugFromToken(accessToken: string): string | null {
+  try {
+    const { payload } = jwtDecode(accessToken)
+    if (jwtIsSalesChannel(payload)) return payload.organization.slug
+  } catch {
+    /* a malformed token carries no organization */
+  }
+  return null
+}

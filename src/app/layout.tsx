@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AppFooter } from "@/components/app-footer"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
+      <body className="flex min-h-screen flex-col bg-gray-50 text-gray-900 antialiased">
         <header className="border-b border-gray-200 bg-white">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
             <span className="text-sm font-semibold tracking-widest text-gray-500 uppercase">
@@ -30,7 +31,10 @@ export default function RootLayout({
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-4 py-10">{children}</main>
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+          {children}
+        </main>
+        <AppFooter />
       </body>
     </html>
   )
