@@ -41,18 +41,18 @@ your own integration.
 
 ## Reading the code
 
-| Where | What |
-|---|---|
-| `src/gateways/stripe/` | Stripe card payment, the Amazon Pay redirect return, stored-card reuse, express checkout |
-| `src/gateways/adyen/` | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout |
-| `src/gateways/braintree/` | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser |
-| `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
-| `src/gateways/checkout-com/` | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page |
-| `src/gateways/mollie/` | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`) |
-| `src/gateways/manual/` | Manual payment: session and authorization in one step |
-| `src/gateways/types.ts` | The contract between the checkout and a gateway module |
-| `src/components/payment-section.tsx` | What every gateway shares: gift cards, the balance, stored cards, redirect returns, placing the order |
-| `CONTEXT.md` | The domain vocabulary (payment setting, payment session, payment wallet, …) |
+| Where                                | What                                                                                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/gateways/stripe/`               | Stripe card payment, the Amazon Pay redirect return, stored-card reuse, express checkout                                      |
+| `src/gateways/adyen/`                | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout                   |
+| `src/gateways/braintree/`            | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser                                                           |
+| `src/gateways/paypal/`               | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
+| `src/gateways/checkout-com/`         | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page                             |
+| `src/gateways/mollie/`               | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`)                      |
+| `src/gateways/manual/`               | Manual payment: session and authorization in one step                                                                         |
+| `src/gateways/types.ts`              | The contract between the checkout and a gateway module                                                                        |
+| `src/components/payment-section.tsx` | What every gateway shares: gift cards, the balance, stored cards, redirect returns, placing the order                         |
+| `CONTEXT.md`                         | The domain vocabulary (payment setting, payment session, payment wallet, …)                                                   |
 
 Each gateway's main file opens with a comment that walks through its flow step
 by step.
@@ -150,16 +150,16 @@ settings (`DEV_TUNNEL_HOST`, `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, ...) in
 
 In short:
 
-| Group | Variables | Without them |
-|---|---|---|
-| Required | `CL_CLIENT_ID`, `CL_MARKET_CODE` | The app doesn't start |
-| Organization domain | `CL_DOMAIN` | The default Commerce Layer domain |
-| Store page | `CL_SKU_CODE`, `CL_ADDRESS_COUNTRY_CODE`, `CL_CUSTOMER_EMAIL`, `CL_CUSTOMER_PASSWORD` | The first priced SKU, a US address, no customer login |
-| Integration application | `CL_INTEGRATION_CLIENT_ID`, `CL_INTEGRATION_CLIENT_SECRET` | No express buttons, no debug panels, Adyen's advanced flow fails. The store page says so |
-| Debug panels | `CL_DEBUG_PANELS` | Panels off in a production build (always on in `pnpm dev`) |
-| Adyen express | `CL_APPLE_PAY_MERCHANT_ID`, `CL_APPLE_PAY_MERCHANT_NAME`, `CL_EXPRESS_COUNTRY_CODE` | No Adyen Apple Pay button |
-| Mollie | `MOLLIE_API_KEY`, `GATEWAY_SHARED_SECRET`, `CL_WEBHOOK_ENDPOINT_URL`, `APP_URL` | Mollie payments don't work |
-| Debugging | `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, `DEV_TUNNEL_HOST` | No request logging, no tunnel |
+| Group                   | Variables                                                                             | Without them                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Required                | `CL_CLIENT_ID`, `CL_MARKET_CODE`                                                      | The app doesn't start                                                                    |
+| Organization domain     | `CL_DOMAIN`                                                                           | The default Commerce Layer domain                                                        |
+| Store page              | `CL_SKU_CODE`, `CL_ADDRESS_COUNTRY_CODE`, `CL_CUSTOMER_EMAIL`, `CL_CUSTOMER_PASSWORD` | The first priced SKU, a US address, no customer login                                    |
+| Integration application | `CL_INTEGRATION_CLIENT_ID`, `CL_INTEGRATION_CLIENT_SECRET`                            | No express buttons, no debug panels, Adyen's advanced flow fails. The store page says so |
+| Debug panels            | `CL_DEBUG_PANELS`                                                                     | Panels off in a production build (always on in `pnpm dev`)                               |
+| Adyen express           | `CL_APPLE_PAY_MERCHANT_ID`, `CL_APPLE_PAY_MERCHANT_NAME`, `CL_EXPRESS_COUNTRY_CODE`   | No Adyen Apple Pay button                                                                |
+| Mollie                  | `MOLLIE_API_KEY`, `GATEWAY_SHARED_SECRET`, `CL_WEBHOOK_ENDPOINT_URL`, `APP_URL`       | Mollie payments don't work                                                               |
+| Debugging               | `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, `DEV_TUNNEL_HOST`                                    | No request logging, no tunnel                                                            |
 
 Apple Pay and Google Pay only show up on a browser and device that support
 them, and Apple Pay needs a domain verified with Apple, so express payments

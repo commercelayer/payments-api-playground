@@ -83,12 +83,12 @@ Gift cards, multiple/partial payments, Adyen, save-to-wallet, etc.:
    the spec, so they're reused across scenarios.
 
 ```ts
-import { expect, test } from "./fixtures";
+import { expect, test } from "./fixtures"
 
 test("...", async ({ checkout }) => {
-  await checkout.selectMethod("payment_setting_manuals");
+  await checkout.selectMethod("payment_setting_manuals")
   // ...
-});
+})
 ```
 
 ## Stripe Elements selectors (gotcha)
@@ -144,11 +144,11 @@ button **SUBMIT** (`completeBraintreeChallenge()`).
 
 Test cards (any future expiry, CVV `123`):
 
-| Card | Outcome |
-|---|---|
-| `4005 5192 0000 0004` | 3DS challenge, then authorized |
+| Card                  | Outcome                                                   |
+| --------------------- | --------------------------------------------------------- |
+| `4005 5192 0000 0004` | 3DS challenge, then authorized                            |
 | `4000 0000 0000 1091` | 3DS challenge, then authorized (used by the Drop-in test) |
-| `4000 0000 0000 1000` | frictionless 3DS, authorized |
+| `4000 0000 0000 1000` | frictionless 3DS, authorized                              |
 
 A **decline** is driven by the amount, not the card: a total between 2000.00 and
 2999.99 comes back `PROCESSOR_DECLINED`. `raiseTotalTo()` gets the order there
@@ -179,7 +179,7 @@ and Checkout.com sends the whole page to the session's `failure_url`
 
 Test cards (any future expiry, CVV `100`):
 
-| Card | Outcome |
-|---|---|
+| Card                  | Outcome                        |
+| --------------------- | ------------------------------ |
 | `4242 4242 4242 4242` | 3DS challenge, then authorized |
-| `4485 0403 7153 6584` | frictionless 3DS, authorized |
+| `4485 0403 7153 6584` | frictionless 3DS, authorized   |

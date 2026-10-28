@@ -9,7 +9,7 @@ generated from the API schema, is the source of truth.
 
 **Payment Setting**:
 A configured payment gateway (Stripe, Adyen, Manual, Gift Card, …) at the organization/market
-level. The new replacement for a *payment gateway* + *payment method* pair. Modelled per-provider
+level. The new replacement for a _payment gateway_ + _payment method_ pair. Modelled per-provider
 (`payment_setting_stripes`, `payment_setting_adyens`, …).
 _Avoid_: payment gateway, payment method.
 
@@ -36,33 +36,33 @@ A customer's saved card stored for reuse, modelled as the new-API `payment_walle
 (gateway-agnostic; belongs to a `customer` + a `payment_setting`). Holds the gateway tokens
 (`customer_token` = shopper reference, `payment_token` = stored method id) plus display data
 (`payment_data`: brand/last4/exp). A `payment_session` can reference the `payment_wallet` it reused.
-_Not to be confused with_ the device **wallet** (Apple Pay / Google Pay) button in *Express Payment* —
+_Not to be confused with_ the device **wallet** (Apple Pay / Google Pay) button in _Express Payment_ —
 that is a one-time device token, not a stored card.
 _Avoid_: customer payment source (old-API name), stored card as a bare gateway token.
 
 **Order Subscription**:
 A recurring purchase agreement for a customer, modelled as `order_subscriptions`. It carries a
 `frequency` and a lifecycle (`draft → pending → inactive → active → running → cancelled`), and on each
-run generates a new order from a *Source Order*. Charges its bound *Payment Wallet* + *Payment Setting*
-as a *Merchant-Initiated Payment*.
+run generates a new order from a _Source Order_. Charges its bound _Payment Wallet_ + _Payment Setting_
+as a _Merchant-Initiated Payment_.
 _Avoid_: recurring order, standing order, plan.
 
 **Subscription Model**:
 Market-level configuration declaring which `frequencies` are available (and `auto_activate`).
-Associated to a *Market*, not set per-subscription. An *Order Subscription* whose frequency matches a
+Associated to a _Market_, not set per-subscription. An _Order Subscription_ whose frequency matches a
 model on its market becomes **automatic** (recurring charges fire); without a matching model it is a
 **manual** subscription that never self-charges.
 _Avoid_: plan, tier, billing scheme.
 
 **Source Order** / **Target Order**:
-The *Source Order* is the placed order that seeds an *Order Subscription* (the checkout the customer
-actually completed). A *Target Order* is a fresh order copied from the source on each subscription run.
-With `activate_by_source_order`, the source order counts as run #1, so the first *Target Order* is
+The _Source Order_ is the placed order that seeds an _Order Subscription_ (the checkout the customer
+actually completed). A _Target Order_ is a fresh order copied from the source on each subscription run.
+With `activate_by_source_order`, the source order counts as run #1, so the first _Target Order_ is
 run #2.
 _Avoid_: parent/child order, original order, renewal order.
 
 **Merchant-Initiated Payment** (a.k.a. stored-credential charge, Adyen `ContAuth`):
-A charge Commerce Layer initiates against a customer's saved *Payment Wallet* with **no shopper
+A charge Commerce Layer initiates against a customer's saved _Payment Wallet_ with **no shopper
 present**, on the subscription's schedule. Contrast with the shopper-present checkout charge, where the
 customer authorizes in real time (Adyen `Ecommerce`).
 _Avoid_: recurring charge (ambiguous), auto-payment, background charge.
@@ -77,9 +77,9 @@ _Avoid_: repricing, tax quote.
 ## Example dialogue
 
 > **Dev:** For express pay, when do we create the payment session?
-> **Domain expert:** Not until the buyer authorizes. During the sheet you only have a *redacted
-> address* — enough to drive a *recalculation* and show a total, but the *payment session* is created
-> at confirm, once the amount is final, against the chosen *payment setting*.
+> **Domain expert:** Not until the buyer authorizes. During the sheet you only have a _redacted
+> address_ — enough to drive a _recalculation_ and show a total, but the _payment session_ is created
+> at confirm, once the amount is final, against the chosen _payment setting_.
 > **Dev:** And the gateway resource per provider?
-> **Domain expert:** That's the *payment setting* — `payment_setting_stripes` here. Its `public_key`
-> is what the browser needs. The old *payment gateway* / *payment method* pair is gone.
+> **Domain expert:** That's the _payment setting_ — `payment_setting_stripes` here. Its `public_key`
+> is what the browser needs. The old _payment gateway_ / _payment method_ pair is gone.
