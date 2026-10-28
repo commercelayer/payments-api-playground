@@ -1,14 +1,14 @@
-import type { PaymentSession, PaymentSettingAdyen } from "@commercelayer/sdk";
-import { type PaymentClient, pollAuthorization } from "@/lib/payments";
+import type { PaymentSession, PaymentSettingAdyen } from "@commercelayer/sdk"
+import { type PaymentClient, pollAuthorization } from "@/lib/payments"
 import {
-	type AdyenPendingAction,
-	adyenAction,
-	isAdyenAuthSuccess,
-} from "./authorization";
-import { completeAdyenSessionRedirect } from "./session-return";
+  type AdyenPendingAction,
+  adyenAction,
+  isAdyenAuthSuccess,
+} from "./authorization"
+import { completeAdyenSessionRedirect } from "./session-return"
 
 /** Query parameters Adyen appends to the `returnUrl` after a redirect. */
-export const ADYEN_RETURN_PARAMS = ["redirectResult", "sessionId"];
+export const ADYEN_RETURN_PARAMS = ["redirectResult", "sessionId"]
 
 /**
  * The redirect result of an Adyen return, or null when the page was not
@@ -27,19 +27,19 @@ export const ADYEN_RETURN_PARAMS = ["redirectResult", "sessionId"];
  * apart.
  */
 export function adyenReturn(
-	searchParams: URLSearchParams,
+  searchParams: URLSearchParams,
 ): { redirectResult: string; adyenSessionId: string | null } | null {
-	const redirectResult = searchParams.get("redirectResult");
-	if (redirectResult == null) return null;
-	return { redirectResult, adyenSessionId: searchParams.get("sessionId") };
+  const redirectResult = searchParams.get("redirectResult")
+  if (redirectResult == null) return null
+  return { redirectResult, adyenSessionId: searchParams.get("sessionId") }
 }
 
 function clientKeyOf(session: PaymentSession): string | null | undefined {
-	return (
-		session.payment_setting as PaymentSettingAdyen & {
-			public_key?: string | null;
-		}
-	).public_key;
+  return (
+    session.payment_setting as PaymentSettingAdyen & {
+      public_key?: string | null
+    }
+  ).public_key
 }
 
 /**
@@ -56,95 +56,95 @@ function clientKeyOf(session: PaymentSession): string | null | undefined {
  * caller places the order. Throws when the payment can't be completed.
  */
 export async function resumeAdyenRedirect({
-	client,
-	paymentSessions,
-	redirectResult,
-	adyenSessionId,
-	authorizeGiftCards,
+  client,
+  paymentSessions,
+  redirectResult,
+  adyenSessionId,
+  authorizeGiftCards,
 }: {
-	client: PaymentClient;
-	paymentSessions: PaymentSession[];
-	redirectResult: string;
-	adyenSessionId: string | null;
-	authorizeGiftCards: () => Promise<void>;
+  client: PaymentClient
+  paymentSessions: PaymentSession[]
+  redirectResult: string
+  adyenSessionId: string | null
+  authorizeGiftCards: () => Promise<void>
 }): Promise<AdyenPendingAction | null> {
-	const adyenSessions = paymentSessions.filter(
-		(s) => s.payment_setting?.type === "payment_setting_adyens",
-	);
+  const adyenSessions = paymentSessions.filter(
+    (s) => s.payment_setting?.type === "payment_setting_adyens",
+  )
 
-	if (adyenSessionId != null) {
-		await resumeDropinPayment({
-			client,
-			adyenSessions,
-			adyenSessionId,
-			redirectResult,
-			authorizeGiftCards,
-		});
-		return null;
-	}
+  if (adyenSessionId != null) {
+    await resumeDropinPayment({
+      client,
+      adyenSessions,
+      adyenSessionId,
+      redirectResult,
+      authorizeGiftCards,
+    })
+    return null
+  }
 
-	const session = adyenSessions.find(
-		(s) => s.payment_authorization?.status === "requires_action",
-	);
-	const authId = session?.payment_authorization?.id;
+  const session = adyenSessions.find(
+    (s) => s.payment_authorization?.status === "requires_action",
+  )
+  const authId = session?.payment_authorization?.id
 
-	if (!session || !authId) {
-		// Nothing left to authenticate. That is not necessarily a failure: the
-		// authorization may already have settled — a webhook can beat the shopper
-		// back, and a second return lands here too. Finish the order instead of
-		// blaming the shopper for a payment that worked.
-		const settled = adyenSessions.find(
-			(s) =>
-				s.payment_authorization != null &&
-				isAdyenAuthSuccess(s.payment_authorization),
-		);
-		if (!settled) {
-			throw new Error(
-				"Returned from 3-D Secure but no authorization is awaiting authentication. Please refresh and try again.",
-			);
-		}
-		await authorizeGiftCards();
-		return null;
-	}
+  if (!session || !authId) {
+    // Nothing left to authenticate. That is not necessarily a failure: the
+    // authorization may already have settled — a webhook can beat the shopper
+    // back, and a second return lands here too. Finish the order instead of
+    // blaming the shopper for a payment that worked.
+    const settled = adyenSessions.find(
+      (s) =>
+        s.payment_authorization != null &&
+        isAdyenAuthSuccess(s.payment_authorization),
+    )
+    if (!settled) {
+      throw new Error(
+        "Returned from 3-D Secure but no authorization is awaiting authentication. Please refresh and try again.",
+      )
+    }
+    await authorizeGiftCards()
+    return null
+  }
 
-	// CL forwards `_payment_details` verbatim to Adyen /payments/details.
-	await client.payment_authorizations._payment_details(authId, {
-		details: { redirectResult },
-	});
-	// Poll through `requires_action` as well: that is the status the
-	// authorization is in right now, and reading it back before it clears
-	// returns the action we have just satisfied. Rendering that stale action
-	// sends the shopper to the challenge a second time, and the return from
-	// *that* finds nothing awaiting authentication. A genuine second challenge
-	// still surfaces, just after this shorter wait.
-	const auth = await pollAuthorization(client, authId, {
-		transientStatuses: ["pending", "requires_action"],
-		maxAttempts: 10,
-	});
+  // CL forwards `_payment_details` verbatim to Adyen /payments/details.
+  await client.payment_authorizations._payment_details(authId, {
+    details: { redirectResult },
+  })
+  // Poll through `requires_action` as well: that is the status the
+  // authorization is in right now, and reading it back before it clears
+  // returns the action we have just satisfied. Rendering that stale action
+  // sends the shopper to the challenge a second time, and the return from
+  // *that* finds nothing awaiting authentication. A genuine second challenge
+  // still surfaces, just after this shorter wait.
+  const auth = await pollAuthorization(client, authId, {
+    transientStatuses: ["pending", "requires_action"],
+    maxAttempts: 10,
+  })
 
-	// A further action (e.g. a second challenge) is unusual after a redirect but
-	// costs nothing to support. Only when the authorization still says it is
-	// waiting for one: `next_action_data` keeps the action we have just
-	// satisfied even after the status moves on, so reading it unconditionally
-	// re-renders the *original* challenge and sends the shopper back to Adyen,
-	// same `pspReference` and all.
-	if (auth.status === "requires_action") {
-		const action = adyenAction(auth);
-		if (!action) {
-			throw new Error(
-				"Adyen still requires authentication but returned no action to render.",
-			);
-		}
-		const clientKey = clientKeyOf(session);
-		if (!clientKey) throw new Error("Missing Adyen client key.");
-		return { action, sessionId: session.id, clientKey };
-	}
-	if (!isAdyenAuthSuccess(auth)) {
-		throw new Error(`Authentication failed (${auth.status}).`);
-	}
+  // A further action (e.g. a second challenge) is unusual after a redirect but
+  // costs nothing to support. Only when the authorization still says it is
+  // waiting for one: `next_action_data` keeps the action we have just
+  // satisfied even after the status moves on, so reading it unconditionally
+  // re-renders the *original* challenge and sends the shopper back to Adyen,
+  // same `pspReference` and all.
+  if (auth.status === "requires_action") {
+    const action = adyenAction(auth)
+    if (!action) {
+      throw new Error(
+        "Adyen still requires authentication but returned no action to render.",
+      )
+    }
+    const clientKey = clientKeyOf(session)
+    if (!clientKey) throw new Error("Missing Adyen client key.")
+    return { action, sessionId: session.id, clientKey }
+  }
+  if (!isAdyenAuthSuccess(auth)) {
+    throw new Error(`Authentication failed (${auth.status}).`)
+  }
 
-	await authorizeGiftCards();
-	return null;
+  await authorizeGiftCards()
+  return null
 }
 
 /**
@@ -160,50 +160,50 @@ export async function resumeAdyenRedirect({
  * authorization that already exists means the payment was finished.
  */
 async function resumeDropinPayment({
-	client,
-	adyenSessions,
-	adyenSessionId,
-	redirectResult,
-	authorizeGiftCards,
+  client,
+  adyenSessions,
+  adyenSessionId,
+  redirectResult,
+  authorizeGiftCards,
 }: {
-	client: PaymentClient;
-	adyenSessions: PaymentSession[];
-	adyenSessionId: string;
-	redirectResult: string;
-	authorizeGiftCards: () => Promise<void>;
+  client: PaymentClient
+  adyenSessions: PaymentSession[]
+  adyenSessionId: string
+  redirectResult: string
+  authorizeGiftCards: () => Promise<void>
 }) {
-	const session = adyenSessions.find(
-		(s) => s.response_data?.id === adyenSessionId,
-	);
-	if (!session) {
-		throw new Error(
-			"Returned from 3-D Secure but the payment session could not be found. Please refresh and try again.",
-		);
-	}
-	if (session.payment_authorization != null) return;
+  const session = adyenSessions.find(
+    (s) => s.response_data?.id === adyenSessionId,
+  )
+  if (!session) {
+    throw new Error(
+      "Returned from 3-D Secure but the payment session could not be found. Please refresh and try again.",
+    )
+  }
+  if (session.payment_authorization != null) return
 
-	const clientKey = clientKeyOf(session);
-	const sessionData = session.response_data?.sessionData;
-	if (!clientKey || typeof sessionData !== "string") {
-		throw new Error("Missing Adyen session details to finish 3-D Secure.");
-	}
+  const clientKey = clientKeyOf(session)
+  const sessionData = session.response_data?.sessionData
+  if (!clientKey || typeof sessionData !== "string") {
+    throw new Error("Missing Adyen session details to finish 3-D Secure.")
+  }
 
-	const resultCode = await completeAdyenSessionRedirect({
-		clientKey,
-		sessionId: adyenSessionId,
-		sessionData,
-		redirectResult,
-	});
-	if (
-		resultCode !== "Authorised" &&
-		resultCode !== "Pending" &&
-		resultCode !== "Received"
-	) {
-		throw new Error(`Payment ${resultCode?.toLowerCase() ?? "failed"}.`);
-	}
+  const resultCode = await completeAdyenSessionRedirect({
+    clientKey,
+    sessionId: adyenSessionId,
+    sessionData,
+    redirectResult,
+  })
+  if (
+    resultCode !== "Authorised" &&
+    resultCode !== "Pending" &&
+    resultCode !== "Received"
+  ) {
+    throw new Error(`Payment ${resultCode?.toLowerCase() ?? "failed"}.`)
+  }
 
-	await authorizeGiftCards();
-	await client.payment_authorizations.create({
-		payment_session: client.payment_sessions.relationship(session.id),
-	});
+  await authorizeGiftCards()
+  await client.payment_authorizations.create({
+    payment_session: client.payment_sessions.relationship(session.id),
+  })
 }

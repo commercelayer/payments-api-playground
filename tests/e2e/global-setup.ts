@@ -1,4 +1,4 @@
-import { cancelCustomerDataSince } from "./integration-api";
+import { cancelCustomerDataSince } from "./integration-api"
 
 /**
  * Every run saves cards and starts weekly subscriptions for the e2e customer,
@@ -11,16 +11,16 @@ import { cancelCustomerDataSince } from "./integration-api";
  * run.
  */
 export default async function globalSetup() {
-	const startedAt = new Date();
-	return async () => {
-		if (process.env.E2E_KEEP_DATA) return;
-		const { subscriptions, wallets, failed } =
-			await cancelCustomerDataSince(startedAt);
-		console.log(
-			`e2e cleanup: cancelled ${subscriptions} order subscriptions and ${wallets} payment wallets`,
-		);
-		if (failed.length) {
-			console.warn(`e2e cleanup: could not cancel\n  ${failed.join("\n  ")}`);
-		}
-	};
+  const startedAt = new Date()
+  return async () => {
+    if (process.env.E2E_KEEP_DATA) return
+    const { subscriptions, wallets, failed } =
+      await cancelCustomerDataSince(startedAt)
+    console.log(
+      `e2e cleanup: cancelled ${subscriptions} order subscriptions and ${wallets} payment wallets`,
+    )
+    if (failed.length) {
+      console.warn(`e2e cleanup: could not cancel\n  ${failed.join("\n  ")}`)
+    }
+  }
 }

@@ -1,5 +1,5 @@
-import type { PaymentSession } from "@commercelayer/sdk";
-import { type PaymentClient, pollAuthorization } from "@/lib/payments";
+import type { PaymentSession } from "@commercelayer/sdk"
+import { type PaymentClient, pollAuthorization } from "@/lib/payments"
 
 /**
  * Authorizes a session whose payment Flow already submitted and Checkout.com
@@ -10,28 +10,28 @@ import { type PaymentClient, pollAuthorization } from "@/lib/payments";
  * settles. Throws unless it succeeds.
  */
 export async function authorizeCheckoutComPayment({
-	client,
-	session,
-	paymentId,
-	authorizeGiftCards,
+  client,
+  session,
+  paymentId,
+  authorizeGiftCards,
 }: {
-	client: PaymentClient;
-	session: PaymentSession;
-	paymentId: string;
-	authorizeGiftCards: () => Promise<void>;
+  client: PaymentClient
+  session: PaymentSession
+  paymentId: string
+  authorizeGiftCards: () => Promise<void>
 }): Promise<void> {
-	await authorizeGiftCards();
-	await client.payment_sessions.update({
-		id: session.id,
-		client_data: { ...session.client_data, payment_method: paymentId },
-	});
-	const created = await client.payment_authorizations.create({
-		payment_session: client.payment_sessions.relationship(session.id),
-	});
-	const auth = await pollAuthorization(client, created.id);
-	if (auth.status !== "succeeded") {
-		throw new Error(
-			`The payment was not authorized (authorization ${auth.status}).`,
-		);
-	}
+  await authorizeGiftCards()
+  await client.payment_sessions.update({
+    id: session.id,
+    client_data: { ...session.client_data, payment_method: paymentId },
+  })
+  const created = await client.payment_authorizations.create({
+    payment_session: client.payment_sessions.relationship(session.id),
+  })
+  const auth = await pollAuthorization(client, created.id)
+  if (auth.status !== "succeeded") {
+    throw new Error(
+      `The payment was not authorized (authorization ${auth.status}).`,
+    )
+  }
 }

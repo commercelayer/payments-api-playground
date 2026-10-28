@@ -1,4 +1,4 @@
-import { jwtDecode, jwtIsSalesChannel } from "@commercelayer/js-auth";
+import { jwtDecode, jwtIsSalesChannel } from "@commercelayer/js-auth"
 
 /**
  * The customer id carried by a sales-channel token, or null for a guest.
@@ -9,13 +9,13 @@ import { jwtDecode, jwtIsSalesChannel } from "@commercelayer/js-auth";
  * latter, so this is the check that decides whether to offer them at all.
  */
 export function customerIdFromToken(accessToken: string): string | null {
-	try {
-		const { payload } = jwtDecode(accessToken);
-		if (jwtIsSalesChannel(payload) && payload.owner?.type === "Customer") {
-			return payload.owner.id;
-		}
-	} catch {
-		/* a malformed token is simply not a customer token */
-	}
-	return null;
+  try {
+    const { payload } = jwtDecode(accessToken)
+    if (jwtIsSalesChannel(payload) && payload.owner?.type === "Customer") {
+      return payload.owner.id
+    }
+  } catch {
+    /* a malformed token is simply not a customer token */
+  }
+  return null
 }

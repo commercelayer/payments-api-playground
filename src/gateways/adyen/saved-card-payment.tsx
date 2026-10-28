@@ -1,14 +1,14 @@
-"use client";
+"use client"
 
-import type { PaymentSettingAdyen, PaymentWallet } from "@commercelayer/sdk";
-import { useState } from "react";
-import { type PaymentClient, pollAuthorization } from "@/lib/payments";
+import type { PaymentSettingAdyen, PaymentWallet } from "@commercelayer/sdk"
+import { useState } from "react"
+import { type PaymentClient, pollAuthorization } from "@/lib/payments"
 import {
-	type AdyenPendingAction,
-	adyenAction,
-	isAdyenAuthSuccess,
-} from "./authorization";
-import { AdyenWalletCvcStep } from "./saved-card-cvc-step";
+  type AdyenPendingAction,
+  adyenAction,
+  isAdyenAuthSuccess,
+} from "./authorization"
+import { AdyenWalletCvcStep } from "./saved-card-cvc-step"
 
 /** The version of the Adyen /payments request CL builds for a stored card,
  * passed as the authorization's `_internal_version`. With a `payment_wallet`
@@ -18,16 +18,16 @@ import { AdyenWalletCvcStep } from "./saved-card-cvc-step";
  * (`authenticationData.threeDSRequestData.nativeThreeDS: preferred`);
  * `recurringProcessingModel: CardOnFile` follows from the attached wallet, and
  * `shopperReference` is injected from `wallet.customer.shopper_reference`. */
-const ADYEN_REUSE_INTERNAL_VERSION = "WalletCvv";
+const ADYEN_REUSE_INTERNAL_VERSION = "WalletCvv"
 
 /** Adyen brand code for a stored card's CVC-only secured field, read from the
  * wallet's gateway payment_data (stored shape `brand`, event shape `paymentMethod`).
  * Normalizes the common mastercard alias to Adyen's "mc". */
 function adyenWalletBrand(wallet: PaymentWallet): string {
-	// biome-ignore lint/suspicious/noExplicitAny: gateway-specific payment_data
-	const pd = (wallet.payment_data ?? {}) as Record<string, any>;
-	const raw = String(pd.brand ?? pd.paymentMethod ?? "").toLowerCase();
-	return raw === "mastercard" ? "mc" : raw;
+  // biome-ignore lint/suspicious/noExplicitAny: gateway-specific payment_data
+  const pd = (wallet.payment_data ?? {}) as Record<string, any>
+  const raw = String(pd.brand ?? pd.paymentMethod ?? "").toLowerCase()
+  return raw === "mastercard" ? "mc" : raw
 }
 
 /**
@@ -51,126 +51,126 @@ function adyenWalletBrand(wallet: PaymentWallet): string {
  * never sends it.
  */
 export function AdyenSavedCardPayment({
-	client,
-	orderId,
-	countryCode,
-	wallet,
-	setting,
-	amountCents,
-	currencyCode,
-	authorizeGiftCards,
-	onAuthorized,
-	onActionRequired,
-	onError,
-	onCancel,
+  client,
+  orderId,
+  countryCode,
+  wallet,
+  setting,
+  amountCents,
+  currencyCode,
+  authorizeGiftCards,
+  onAuthorized,
+  onActionRequired,
+  onError,
+  onCancel,
 }: {
-	client: PaymentClient;
-	orderId: string;
-	countryCode: string | null;
-	wallet: PaymentWallet;
-	setting: PaymentSettingAdyen & { public_key?: string | null };
-	amountCents: number;
-	currencyCode: string;
-	authorizeGiftCards: () => Promise<void>;
-	onAuthorized: () => void;
-	onActionRequired: (pending: AdyenPendingAction) => void;
-	onError: (message: string) => void;
-	onCancel: () => void;
+  client: PaymentClient
+  orderId: string
+  countryCode: string | null
+  wallet: PaymentWallet
+  setting: PaymentSettingAdyen & { public_key?: string | null }
+  amountCents: number
+  currencyCode: string
+  authorizeGiftCards: () => Promise<void>
+  onAuthorized: () => void
+  onActionRequired: (pending: AdyenPendingAction) => void
+  onError: (message: string) => void
+  onCancel: () => void
 }) {
-	const [submitted, setSubmitted] = useState(false);
-	const clientKey = setting.public_key;
-	if (!clientKey || !wallet.payment_token) return null;
+  const [submitted, setSubmitted] = useState(false)
+  const clientKey = setting.public_key
+  if (!clientKey || !wallet.payment_token) return null
 
-	async function pay(
-		paymentMethod: Record<string, unknown>,
-		browserInfo: unknown,
-	) {
-		if (!clientKey) return;
-		setSubmitted(true);
-		try {
-			const session = await client.payment_sessions.create({
-				amount_cents: amountCents,
-				client_data: {
-					payment_method: paymentMethod,
-					// CL reads snake_case client_data[:browser_info]; adyen-web emits
-					// camelCase browserInfo. WalletCvv requires native 3DS → Adyen 15_002
-					// ("browserInfo missing for device channel browser") without this.
-					browser_info: browserInfo,
-					return_url: window.location.href,
-				},
-				payment_setting: client.payment_settings.relationship(setting.id),
-				order: client.orders.relationship(orderId),
-				payment_wallet: client.payment_wallets.relationship(wallet.id),
-			});
+  async function pay(
+    paymentMethod: Record<string, unknown>,
+    browserInfo: unknown,
+  ) {
+    if (!clientKey) return
+    setSubmitted(true)
+    try {
+      const session = await client.payment_sessions.create({
+        amount_cents: amountCents,
+        client_data: {
+          payment_method: paymentMethod,
+          // CL reads snake_case client_data[:browser_info]; adyen-web emits
+          // camelCase browserInfo. WalletCvv requires native 3DS → Adyen 15_002
+          // ("browserInfo missing for device channel browser") without this.
+          browser_info: browserInfo,
+          return_url: window.location.href,
+        },
+        payment_setting: client.payment_settings.relationship(setting.id),
+        order: client.orders.relationship(orderId),
+        payment_wallet: client.payment_wallets.relationship(wallet.id),
+      })
 
-			const created = await client.payment_authorizations.create({
-				payment_session: client.payment_sessions.relationship(session.id),
-				// Selects the WalletCvv `/payments` request. CL reads it from the
-				// transaction it is building the request for, so it belongs here on the
-				// authorization, not on the session.
-				_internal_version: ADYEN_REUSE_INTERNAL_VERSION,
-			});
-			const auth = await pollAuthorization(client, created.id);
+      const created = await client.payment_authorizations.create({
+        payment_session: client.payment_sessions.relationship(session.id),
+        // Selects the WalletCvv `/payments` request. CL reads it from the
+        // transaction it is building the request for, so it belongs here on the
+        // authorization, not on the session.
+        _internal_version: ADYEN_REUSE_INTERNAL_VERSION,
+      })
+      const auth = await pollAuthorization(client, created.id)
 
-			// The gift cards wait for Adyen to accept the card. After a 3-D Secure
-			// step that happens in another component, so placement authorizes them.
-			const action = adyenAction(auth);
-			if (action) {
-				onActionRequired({ action, sessionId: session.id, clientKey });
-				return;
-			}
-			if (auth.status === "requires_action") {
-				throw new Error(
-					"Adyen requires additional authentication but returned no action to render.",
-				);
-			}
-			if (!isAdyenAuthSuccess(auth)) {
-				const refusal = auth.response_data?.refusalReason;
-				throw new Error(
-					typeof refusal === "string" ? refusal : `Payment ${auth.status}.`,
-				);
-			}
-			try {
-				await authorizeGiftCards();
-			} catch {
-				/* best-effort; placement will surface any real problem */
-			}
-			onAuthorized();
-		} catch (e) {
-			onError(e instanceof Error ? e.message : "Payment failed.");
-		}
-	}
+      // The gift cards wait for Adyen to accept the card. After a 3-D Secure
+      // step that happens in another component, so placement authorizes them.
+      const action = adyenAction(auth)
+      if (action) {
+        onActionRequired({ action, sessionId: session.id, clientKey })
+        return
+      }
+      if (auth.status === "requires_action") {
+        throw new Error(
+          "Adyen requires additional authentication but returned no action to render.",
+        )
+      }
+      if (!isAdyenAuthSuccess(auth)) {
+        const refusal = auth.response_data?.refusalReason
+        throw new Error(
+          typeof refusal === "string" ? refusal : `Payment ${auth.status}.`,
+        )
+      }
+      try {
+        await authorizeGiftCards()
+      } catch {
+        /* best-effort; placement will surface any real problem */
+      }
+      onAuthorized()
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Payment failed.")
+    }
+  }
 
-	if (submitted) {
-		return (
-			<p className="px-6 py-5 text-sm text-gray-500">Processing payment…</p>
-		);
-	}
+  if (submitted) {
+    return (
+      <p className="px-6 py-5 text-sm text-gray-500">Processing payment…</p>
+    )
+  }
 
-	return (
-		<div className="px-6 py-5">
-			<div className="mb-3 flex items-center justify-between">
-				<p className="text-sm font-medium text-gray-700">
-					Enter your card's security code
-				</p>
-				<button
-					type="button"
-					onClick={onCancel}
-					className="cursor-pointer text-xs font-medium text-gray-400 transition hover:text-gray-600"
-				>
-					Cancel
-				</button>
-			</div>
-			<AdyenWalletCvcStep
-				countryCode={countryCode}
-				storedPaymentMethodId={wallet.payment_token}
-				brand={adyenWalletBrand(wallet)}
-				clientKey={clientKey}
-				amountCents={amountCents}
-				currencyCode={currencyCode}
-				onSubmit={pay}
-				onError={onError}
-			/>
-		</div>
-	);
+  return (
+    <div className="px-6 py-5">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium text-gray-700">
+          Enter your card's security code
+        </p>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="cursor-pointer text-xs font-medium text-gray-400 transition hover:text-gray-600"
+        >
+          Cancel
+        </button>
+      </div>
+      <AdyenWalletCvcStep
+        countryCode={countryCode}
+        storedPaymentMethodId={wallet.payment_token}
+        brand={adyenWalletBrand(wallet)}
+        clientKey={clientKey}
+        amountCents={amountCents}
+        currencyCode={currencyCode}
+        onSubmit={pay}
+        onError={onError}
+      />
+    </div>
+  )
 }

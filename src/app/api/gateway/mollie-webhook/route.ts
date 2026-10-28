@@ -1,1 +1,1 @@
-export { POST } from "@/gateways/mollie/server/webhook";
+export { POST } from "@/gateways/mollie/server/webhook"

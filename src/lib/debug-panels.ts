@@ -5,4 +5,4 @@
  * organization's payment sessions. Always on in `next dev`; a build only turns
  * them on with `CL_DEBUG_PANELS=1`. */
 export const DEBUG_PANELS_ENABLED =
-	process.env.NODE_ENV === "development" || process.env.CL_DEBUG_PANELS === "1";
+  process.env.NODE_ENV === "development" || process.env.CL_DEBUG_PANELS === "1"

@@ -1,1 +1,1 @@
-export { POST } from "@/gateways/mollie/server/capture";
+export { POST } from "@/gateways/mollie/server/capture"

@@ -1,4 +1,4 @@
-import { test } from "./fixtures";
+import { test } from "./fixtures"
 
 /**
  * Full payment with Adyen: select Adyen, fill the Drop-in card form with a test
@@ -7,13 +7,13 @@ import { test } from "./fixtures";
  * via its onPaymentCompleted callback.
  */
 test("pays the full amount with Adyen and places the order", async ({
-	checkout,
+  checkout,
 }) => {
-	await checkout.selectMethod("payment_setting_adyens");
-	await checkout.confirm();
+  await checkout.selectMethod("payment_setting_adyens")
+  await checkout.confirm()
 
-	await checkout.fillAdyenTestCard();
-	await checkout.submitAdyen();
+  await checkout.fillAdyenTestCard()
+  await checkout.submitAdyen()
 
-	await checkout.expectPlaced();
-});
+  await checkout.expectPlaced()
+})
