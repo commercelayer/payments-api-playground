@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test"
+import { ENV } from "varlock/env"
 import { expect, test } from "./fixtures"
 import { fetchPayPalAuthorizedAmounts } from "./integration-api"
 
@@ -12,7 +13,7 @@ import { fetchPayPalAuthorizedAmounts } from "./integration-api"
  */
 test.beforeEach(() => {
   test.skip(
-    !process.env.E2E_PAYPAL_EMAIL || !process.env.E2E_PAYPAL_PASSWORD,
+    !ENV.E2E_PAYPAL_EMAIL || !ENV.E2E_PAYPAL_PASSWORD,
     "E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD not set",
   )
   test.setTimeout(150_000)

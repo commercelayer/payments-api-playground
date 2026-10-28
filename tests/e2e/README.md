@@ -1,14 +1,16 @@
 # End-to-end tests
 
 Playwright tests that drive the real checkout UI against the Commerce Layer
-sandbox org configured in `.env.local`. They validate the new payments API flows
+sandbox org configured in `.env.schema` and `.env.local`. They validate the new payments API flows
 end to end (order created → payment session → authorization → order placed).
 
 ## Prerequisites
 
 - **This project uses [pnpm](https://pnpm.io/).** Use `pnpm install` / `pnpm add`.
   `npm install` fails here with `Cannot read properties of null (reading 'matches')`
-- A configured `.env.local` (the tests reuse it via `next dev`).
+- The env set up as described in the [main README](../../README.md#configure-and-run):
+  an AWS session that can read the Parameter Store parameter, or the values in
+  `.env.local`.
 - One-time browser install: `pnpm exec playwright install chromium`.
 
 ## Running
@@ -19,8 +21,9 @@ pnpm test:e2e payment-methods  # a single spec by name
 pnpm test:e2e --ui             # interactive UI mode
 ```
 
-`playwright.config.ts` boots `pnpm dev` as the web server (so Next loads
-`.env.local` itself), runs single-worker Chromium, and traces on first retry.
+`playwright.config.ts` loads the env with varlock, boots `pnpm dev` as the web
+server (which inherits it), runs single-worker Chromium, and traces on first
+retry.
 
 Orders can't be deleted in Commerce Layer and this points at a **test org**, so
 seeded test orders simply accumulate.

@@ -1,4 +1,5 @@
 import { expect, type Frame, type Locator, type Page } from "@playwright/test"
+import { ENV } from "varlock/env"
 import { raiseOrderTotalTo } from "./integration-api"
 
 /**
@@ -830,8 +831,8 @@ export class CheckoutPage {
    * the sandbox buyer in `E2E_PAYPAL_EMAIL` / `E2E_PAYPAL_PASSWORD`.
    */
   async approveInPayPal(): Promise<void> {
-    const email = process.env.E2E_PAYPAL_EMAIL
-    const password = process.env.E2E_PAYPAL_PASSWORD
+    const email = ENV.E2E_PAYPAL_EMAIL
+    const password = ENV.E2E_PAYPAL_PASSWORD
     if (!email || !password) {
       throw new Error("Missing E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD")
     }

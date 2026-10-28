@@ -111,7 +111,7 @@ Then:
 
 1. In the dashboard, create the payment settings you want to try and add them
    to the market you will use.
-2. Fill in `.env.local` as described below: the sales channel's client ID in
+2. Set the env as described below: the sales channel's client ID in
    `CL_CLIENT_ID`, the same integration credentials you logged in with in
    `CL_INTEGRATION_CLIENT_ID` / `CL_INTEGRATION_CLIENT_SECRET`, and the code of
    that market in `CL_MARKET_CODE`.
@@ -120,11 +120,23 @@ Then:
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # then fill it in
-pnpm dev                           # http://localhost:3000
+pnpm dev     # http://localhost:3000
 ```
 
-`.env.local.example` documents every variable, grouped by feature. In short:
+The env is managed by [varlock](https://varlock.dev). `.env.schema` documents
+every variable, grouped by feature, and `pnpm dev` and the e2e tests load it.
+`next build` and `next start` don't: a deploy reads the process environment as
+usual.
+
+- **With access to our AWS account**, there is nothing to fill in: the sandbox
+  values are read from the Parameter Store parameter
+  `/dev/payments-api-playground` (eu-west-1). Log in first (`aws sso login`).
+- **Without it**, create a `.env.local` with `LOAD_FROM_AWS=false` and the
+  variables you need, copied from `.env.schema`.
+
+`.env.local` is git-ignored and takes precedence over `.env.schema`, also with
+AWS access: use it for your own settings (`DEV_TUNNEL_HOST`,
+`NEXT_PUBLIC_CL_DEBUG_REQUESTS`, ...) or to override a sandbox value. In short:
 
 | Group | Variables | Without them |
 |---|---|---|

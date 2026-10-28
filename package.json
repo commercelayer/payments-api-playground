@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "next dev",
+    "dev": "varlock run -- next dev",
     "build": "next build",
     "start": "next start",
     "check": "biome check .",
@@ -38,7 +38,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@varlock/aws-secrets-plugin": "^1.2.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "varlock": "^1.23.0"
   }
 }
