@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, test } from "./fixtures"
 
 /**
  * A Drop-in payment that leaves the page and comes back.
@@ -13,48 +13,48 @@ import { expect, test } from "./fixtures";
  * six-digit code.
  */
 test("finishes a Drop-in payment after a Klarna redirect", async ({
-	checkout,
-	page,
+  checkout,
+  page,
 }) => {
-	test.setTimeout(150_000);
+  test.setTimeout(150_000)
 
-	await checkout.selectMethod("payment_setting_adyens");
-	await checkout.confirm();
+  await checkout.selectMethod("payment_setting_adyens")
+  await checkout.confirm()
 
-	const dropin = page.locator(".adyen-dropin-container");
-	await dropin.getByRole("radio", { name: "Pay later with Klarna." }).click();
-	await dropin
-		.getByRole("button", { name: /klarna/i })
-		.filter({ visible: true })
-		.first()
-		.click();
-	await page.waitForURL(/playground\.klarna\.com/, { timeout: 30_000 });
+  const dropin = page.locator(".adyen-dropin-container")
+  await dropin.getByRole("radio", { name: "Pay later with Klarna." }).click()
+  await dropin
+    .getByRole("button", { name: /klarna/i })
+    .filter({ visible: true })
+    .first()
+    .click()
+  await page.waitForURL(/playground\.klarna\.com/, { timeout: 30_000 })
 
-	await page
-		.getByRole("textbox")
-		.first()
-		.fill("3106683312", { timeout: 30_000 });
-	await page.getByRole("button", { name: "Continue" }).click();
-	await page
-		.getByText("Enter the 6-digit code")
-		.first()
-		.waitFor({ timeout: 30_000 });
-	await page.getByRole("textbox").first().pressSequentially("123456", {
-		delay: 60,
-	});
+  await page
+    .getByRole("textbox")
+    .first()
+    .fill("3106683312", { timeout: 30_000 })
+  await page.getByRole("button", { name: "Continue" }).click()
+  await page
+    .getByText("Enter the 6-digit code")
+    .first()
+    .waitFor({ timeout: 30_000 })
+  await page.getByRole("textbox").first().pressSequentially("123456", {
+    delay: 60,
+  })
 
-	// The confirmation step loads as a page of its own on another Klarna host,
-	// sometimes after a login hop; wait for it to settle before looking for it.
-	await page.waitForURL(/payments\.playground\.klarna\.com/, {
-		timeout: 30_000,
-	});
-	await page
-		.getByRole("button", { name: "Pay with Klarna" })
-		.click({ timeout: 30_000 });
+  // The confirmation step loads as a page of its own on another Klarna host,
+  // sometimes after a login hop; wait for it to settle before looking for it.
+  await page.waitForURL(/payments\.playground\.klarna\.com/, {
+    timeout: 30_000,
+  })
+  await page
+    .getByRole("button", { name: "Pay with Klarna" })
+    .click({ timeout: 30_000 })
 
-	await page.waitForURL(/localhost:3000\/orders\/.+sessionId=/, {
-		timeout: 45_000,
-	});
-	await checkout.expectPlaced();
-	await expect(page.getByText(/no authorization is awaiting/)).toHaveCount(0);
-});
+  await page.waitForURL(/localhost:3000\/orders\/.+sessionId=/, {
+    timeout: 45_000,
+  })
+  await checkout.expectPlaced()
+  await expect(page.getByText(/no authorization is awaiting/)).toHaveCount(0)
+})

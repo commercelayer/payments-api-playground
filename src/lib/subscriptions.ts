@@ -1,11 +1,11 @@
 import type {
-	Order,
-	OrderSubscription,
-	PaymentWallet,
-} from "@commercelayer/sdk";
-import type { createClient } from "./create-client";
+  Order,
+  OrderSubscription,
+  PaymentWallet,
+} from "@commercelayer/sdk"
+import type { createClient } from "./create-client"
 
-type Client = ReturnType<typeof createClient>;
+type Client = ReturnType<typeof createClient>
 
 /**
  * Frequencies the checkout offers. Every one of them must also be listed on the
@@ -15,15 +15,15 @@ type Client = ReturnType<typeof createClient>;
  * no subscription model at all cannot take a frequency on any line item, so
  * this is a market-level prerequisite, not something the storefront can set up.
  */
-export const SUBSCRIPTION_FREQUENCIES = ["weekly", "monthly"] as const;
+export const SUBSCRIPTION_FREQUENCIES = ["weekly", "monthly"] as const
 
-export type SubscriptionFrequency = (typeof SUBSCRIPTION_FREQUENCIES)[number];
+export type SubscriptionFrequency = (typeof SUBSCRIPTION_FREQUENCIES)[number]
 
 /** Human label for a frequency, e.g. `weekly` → "Every week". */
 export const FREQUENCY_LABELS: Record<SubscriptionFrequency, string> = {
-	weekly: "Every week",
-	monthly: "Every month",
-};
+  weekly: "Every week",
+  monthly: "Every month",
+}
 
 /**
  * The line items a subscription can be generated from.
@@ -33,7 +33,7 @@ export const FREQUENCY_LABELS: Record<SubscriptionFrequency, string> = {
  * so CL neither reads nor accepts a frequency on them.
  */
 export function recurringLineItems(order: Order) {
-	return (order.line_items ?? []).filter((item) => item.item_type === "skus");
+  return (order.line_items ?? []).filter((item) => item.item_type === "skus")
 }
 
 /** The frequency currently carried by the order, or null when it is a one-off.
@@ -44,10 +44,10 @@ export function recurringLineItems(order: Order) {
  * checkout sets one frequency for the whole order, so the first row is
  * representative. */
 export function orderFrequency(order: Order): string | null {
-	for (const item of recurringLineItems(order)) {
-		if (item.frequency) return item.frequency;
-	}
-	return null;
+  for (const item of recurringLineItems(order)) {
+    if (item.frequency) return item.frequency
+  }
+  return null
 }
 
 /**
@@ -64,14 +64,14 @@ export function orderFrequency(order: Order): string | null {
  * `some shipments are missing the shipping method`.
  */
 export async function setOrderFrequency(
-	client: Client,
-	order: Order,
-	frequency: SubscriptionFrequency | null,
+  client: Client,
+  order: Order,
+  frequency: SubscriptionFrequency | null,
 ) {
-	for (const item of recurringLineItems(order)) {
-		if ((item.frequency ?? null) === frequency) continue;
-		await client.line_items.update({ id: item.id, frequency });
-	}
+  for (const item of recurringLineItems(order)) {
+    if ((item.frequency ?? null) === frequency) continue
+    await client.line_items.update({ id: item.id, frequency })
+  }
 }
 
 /**
@@ -90,7 +90,7 @@ export async function setOrderFrequency(
  * see `attachWallet`.
  */
 export async function createSubscriptions(client: Client, orderId: string) {
-	return client.orders._create_subscriptions(orderId);
+  return client.orders._create_subscriptions(orderId)
 }
 
 /**
@@ -102,14 +102,14 @@ export async function createSubscriptions(client: Client, orderId: string) {
  * keeps driving the ones after it.
  */
 export async function rescheduleSubscription(
-	client: Client,
-	subscriptionId: string,
-	nextRunAt: string,
+  client: Client,
+  subscriptionId: string,
+  nextRunAt: string,
 ) {
-	return client.order_subscriptions.update({
-		id: subscriptionId,
-		next_run_at: nextRunAt,
-	});
+  return client.order_subscriptions.update({
+    id: subscriptionId,
+    next_run_at: nextRunAt,
+  })
 }
 
 /** The subscriptions generated from an order, newest first.
@@ -119,18 +119,18 @@ export async function rescheduleSubscription(
  * including them on their source order both work, which is enough for a
  * storefront to show and manage what it just created. */
 export async function fetchOrderSubscriptions(
-	client: Client,
-	orderId: string,
+  client: Client,
+  orderId: string,
 ): Promise<OrderSubscription[]> {
-	const order = await client.orders.retrieve(orderId, {
-		include: [
-			"order_subscriptions",
-			"order_subscriptions.payment_setting",
-			"order_subscriptions.payment_wallet",
-			"order_subscriptions.order_subscription_items",
-		],
-	});
-	return order.order_subscriptions ?? [];
+  const order = await client.orders.retrieve(orderId, {
+    include: [
+      "order_subscriptions",
+      "order_subscriptions.payment_setting",
+      "order_subscriptions.payment_wallet",
+      "order_subscriptions.order_subscription_items",
+    ],
+  })
+  return order.order_subscriptions ?? []
 }
 
 /**
@@ -150,17 +150,17 @@ export async function fetchOrderSubscriptions(
  * something the shopper (or this page) does once the card actually shows up.
  */
 export async function attachWallet(
-	client: Client,
-	subscriptionId: string,
-	walletId: string,
+  client: Client,
+  subscriptionId: string,
+  walletId: string,
 ) {
-	return client.order_subscriptions.update(
-		{
-			id: subscriptionId,
-			payment_wallet: client.payment_wallets.relationship(walletId),
-		},
-		{ include: ["payment_setting", "payment_wallet"] },
-	);
+  return client.order_subscriptions.update(
+    {
+      id: subscriptionId,
+      payment_wallet: client.payment_wallets.relationship(walletId),
+    },
+    { include: ["payment_setting", "payment_wallet"] },
+  )
 }
 
 /**
@@ -177,38 +177,38 @@ export async function attachWallet(
  * `next_run_at` survives a pause and resume — the schedule is not rebuilt.
  */
 export async function activateSubscription(
-	client: Client,
-	subscriptionId: string,
+  client: Client,
+  subscriptionId: string,
 ) {
-	return client.order_subscriptions.update({
-		id: subscriptionId,
-		_activate: true,
-	});
+  return client.order_subscriptions.update({
+    id: subscriptionId,
+    _activate: true,
+  })
 }
 
 /** Pauses a subscription. It stops running but keeps its schedule, and
  * `activateSubscription` picks it back up. Unlike cancelling, this is
  * reversible. */
 export async function deactivateSubscription(
-	client: Client,
-	subscriptionId: string,
+  client: Client,
+  subscriptionId: string,
 ) {
-	return client.order_subscriptions.update({
-		id: subscriptionId,
-		_deactivate: true,
-	});
+  return client.order_subscriptions.update({
+    id: subscriptionId,
+    _deactivate: true,
+  })
 }
 
 /** Cancels a subscription. Irreversible: a cancelled subscription never runs
  * again and cannot be reactivated — pause it instead if it may resume. */
 export async function cancelSubscription(
-	client: Client,
-	subscriptionId: string,
+  client: Client,
+  subscriptionId: string,
 ) {
-	return client.order_subscriptions.update({
-		id: subscriptionId,
-		_cancel: true,
-	});
+  return client.order_subscriptions.update({
+    id: subscriptionId,
+    _cancel: true,
+  })
 }
 
 /** The saved cards that can be bound to a subscription.
@@ -218,10 +218,10 @@ export async function cancelSubscription(
  * checkout — exactly the one the shopper expects to pick. The status filter
  * also keeps out the cards the customer removed, which are `canceled`. */
 export async function fetchWallets(client: Client): Promise<PaymentWallet[]> {
-	return client.payment_wallets.list({
-		include: ["payment_setting"],
-		filters: { status_eq: "succeeded" },
-		sort: { created_at: "desc" },
-		pageSize: 25,
-	});
+  return client.payment_wallets.list({
+    include: ["payment_setting"],
+    filters: { status_eq: "succeeded" },
+    sort: { created_at: "desc" },
+    pageSize: 25,
+  })
 }

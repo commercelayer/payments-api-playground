@@ -1,1 +1,1 @@
-export { POST } from "@/gateways/mollie/server/session";
+export { POST } from "@/gateways/mollie/server/session"

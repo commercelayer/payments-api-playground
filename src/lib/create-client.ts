@@ -1,4 +1,4 @@
-import { CommerceLayer } from "@commercelayer/sdk";
+import { CommerceLayer } from "@commercelayer/sdk"
 
 /** Set `NEXT_PUBLIC_CL_DEBUG_REQUESTS=1` to log every CL API request with its exact
  * wire body. That's what you want when checking what a trigger attribute actually
@@ -9,16 +9,16 @@ import { CommerceLayer } from "@commercelayer/sdk";
  * Server actions log to the terminal, browser-side calls to the devtools console
  * (`NEXT_PUBLIC_` is readable from both). Debug only — the body includes payment
  * client_data; keep it off by default. */
-const DEBUG_REQUESTS = process.env.NEXT_PUBLIC_CL_DEBUG_REQUESTS === "1";
+const DEBUG_REQUESTS = process.env.NEXT_PUBLIC_CL_DEBUG_REQUESTS === "1"
 
 export function createClient(accessToken: string) {
-	const client = CommerceLayer({ accessToken, apiVersion: "2026-05" });
-	if (DEBUG_REQUESTS) {
-		client.addRequestInterceptor((request) => {
-			const { method, body } = request.options;
-			console.log(`[CL] ${method ?? "GET"} ${request.url}`, body ?? "");
-			return request;
-		});
-	}
-	return client;
+  const client = CommerceLayer({ accessToken, apiVersion: "2026-05" })
+  if (DEBUG_REQUESTS) {
+    client.addRequestInterceptor((request) => {
+      const { method, body } = request.options
+      console.log(`[CL] ${method ?? "GET"} ${request.url}`, body ?? "")
+      return request
+    })
+  }
+  return client
 }

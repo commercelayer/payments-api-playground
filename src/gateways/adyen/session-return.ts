@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import type { CoreConfiguration } from "@adyen/adyen-web";
+import type { CoreConfiguration } from "@adyen/adyen-web"
 
 /**
  * Finish a Drop-in (sessions flow) payment after a 3-D Secure redirect.
@@ -14,32 +14,32 @@ import type { CoreConfiguration } from "@adyen/adyen-web";
  * Resolves with Adyen's `resultCode`, or rejects with Adyen's error.
  */
 export async function completeAdyenSessionRedirect({
-	clientKey,
-	sessionId,
-	sessionData,
-	redirectResult,
+  clientKey,
+  sessionId,
+  sessionData,
+  redirectResult,
 }: {
-	clientKey: string;
-	sessionId: string;
-	sessionData: string;
-	redirectResult: string;
+  clientKey: string
+  sessionId: string
+  sessionData: string
+  redirectResult: string
 }): Promise<string | undefined> {
-	const { AdyenCheckout } = await import("@adyen/adyen-web");
-	return new Promise((resolve, reject) => {
-		const config: CoreConfiguration = {
-			environment: clientKey.startsWith("live_") ? "live" : "test",
-			clientKey,
-			session: { id: sessionId, sessionData },
-			onPaymentCompleted: (data) =>
-				resolve("resultCode" in data ? data.resultCode : undefined),
-			onPaymentFailed: (data) =>
-				resolve(data && "resultCode" in data ? data.resultCode : "Refused"),
-			onError: (error) => reject(error),
-		};
-		AdyenCheckout(config)
-			.then((checkout) =>
-				checkout.submitDetails({ details: { redirectResult } }),
-			)
-			.catch(reject);
-	});
+  const { AdyenCheckout } = await import("@adyen/adyen-web")
+  return new Promise((resolve, reject) => {
+    const config: CoreConfiguration = {
+      environment: clientKey.startsWith("live_") ? "live" : "test",
+      clientKey,
+      session: { id: sessionId, sessionData },
+      onPaymentCompleted: (data) =>
+        resolve("resultCode" in data ? data.resultCode : undefined),
+      onPaymentFailed: (data) =>
+        resolve(data && "resultCode" in data ? data.resultCode : "Refused"),
+      onError: (error) => reject(error),
+    }
+    AdyenCheckout(config)
+      .then((checkout) =>
+        checkout.submitDetails({ details: { redirectResult } }),
+      )
+      .catch(reject)
+  })
 }

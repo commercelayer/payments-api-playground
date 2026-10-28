@@ -1,6 +1,6 @@
-import { CheckoutPage } from "./checkout-page";
-import { expect, test } from "./fixtures";
-import { fetchOrderWalletId } from "./integration-api";
+import { CheckoutPage } from "./checkout-page"
+import { expect, test } from "./fixtures"
+import { fetchOrderWalletId } from "./integration-api"
 
 /**
  * Card storing through the session's `vaulting` flag.
@@ -20,310 +20,310 @@ import { fetchOrderWalletId } from "./integration-api";
  * placement.
  */
 async function expectWalletLinked(checkout: CheckoutPage): Promise<void> {
-	const orderId = checkout.orderId();
-	await expect
-		.poll(() => fetchOrderWalletId(orderId), {
-			timeout: 60_000,
-			intervals: [2_000],
-		})
-		.not.toBeNull();
+  const orderId = checkout.orderId()
+  await expect
+    .poll(() => fetchOrderWalletId(orderId), {
+      timeout: 60_000,
+      intervals: [2_000],
+    })
+    .not.toBeNull()
 }
 
 /** The PayPal tests log in to PayPal's sandbox as a buyer in a popup. */
 function skipWithoutPayPalBuyer(): void {
-	test.skip(
-		!process.env.E2E_PAYPAL_EMAIL || !process.env.E2E_PAYPAL_PASSWORD,
-		"E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD not set",
-	);
-	test.setTimeout(150_000);
+  test.skip(
+    !process.env.E2E_PAYPAL_EMAIL || !process.env.E2E_PAYPAL_PASSWORD,
+    "E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD not set",
+  )
+  test.setTimeout(150_000)
 }
 
 async function payWithStripe(checkout: CheckoutPage): Promise<void> {
-	await checkout.selectMethod("payment_setting_stripes");
-	await checkout.confirm();
-	await expect(checkout.stripeCardNumber()).toBeVisible();
-	await checkout.fillStripeTestCard();
-	await checkout.authorize();
-	await checkout.expectPlaced();
+  await checkout.selectMethod("payment_setting_stripes")
+  await checkout.confirm()
+  await expect(checkout.stripeCardNumber()).toBeVisible()
+  await checkout.fillStripeTestCard()
+  await checkout.authorize()
+  await checkout.expectPlaced()
 }
 
 test.describe("vaulting", () => {
-	test("saves a Stripe card on a one-off order when the shopper opts in", async ({
-		page,
-	}) => {
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("saves a Stripe card on a one-off order when the shopper opts in", async ({
+    page,
+  }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectMethod("payment_setting_stripes");
-		await page
-			.getByRole("checkbox", { name: "Save card for future use" })
-			.check();
-		await checkout.confirm();
-		await expect(checkout.stripeCardNumber()).toBeVisible();
-		await checkout.fillStripeTestCard();
-		await checkout.authorize();
-		await checkout.expectPlaced();
+    await checkout.selectMethod("payment_setting_stripes")
+    await page
+      .getByRole("checkbox", { name: "Save card for future use" })
+      .check()
+    await checkout.confirm()
+    await expect(checkout.stripeCardNumber()).toBeVisible()
+    await checkout.fillStripeTestCard()
+    await checkout.authorize()
+    await checkout.expectPlaced()
 
-		await expectWalletLinked(checkout);
-	});
+    await expectWalletLinked(checkout)
+  })
 
-	test("does not save a Stripe card when the shopper leaves it unticked", async ({
-		page,
-	}) => {
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("does not save a Stripe card when the shopper leaves it unticked", async ({
+    page,
+  }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await payWithStripe(checkout);
+    await payWithStripe(checkout)
 
-		expect(await fetchOrderWalletId(checkout.orderId())).toBeNull();
-	});
+    expect(await fetchOrderWalletId(checkout.orderId())).toBeNull()
+  })
 
-	test("activates a weekly subscription paid with a new Stripe card", async ({
-		page,
-	}) => {
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("activates a weekly subscription paid with a new Stripe card", async ({
+    page,
+  }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectFrequency("Every week");
-		await checkout.selectFirstShippingMethod();
-		await payWithStripe(checkout);
+    await checkout.selectFrequency("Every week")
+    await checkout.selectFirstShippingMethod()
+    await payWithStripe(checkout)
 
-		// The subscription is created before the wallet exists, then activated by
-		// CL once the stored card turns into a wallet. The page does not watch for
-		// that, so reload until it shows.
-		const orderUrl = page.url();
-		const section = checkout.subscriptionSection();
-		await expect
-			.poll(
-				async () => {
-					await page.goto(orderUrl);
-					await section
-						.getByText(/^(active|inactive|pending|draft)$/)
-						.first()
-						.waitFor({ timeout: 20_000 })
-						.catch(() => {});
-					return section.getByText("active", { exact: true }).count();
-				},
-				{ timeout: 90_000, intervals: [3_000] },
-			)
-			.toBeGreaterThan(0);
-	});
+    // The subscription is created before the wallet exists, then activated by
+    // CL once the stored card turns into a wallet. The page does not watch for
+    // that, so reload until it shows.
+    const orderUrl = page.url()
+    const section = checkout.subscriptionSection()
+    await expect
+      .poll(
+        async () => {
+          await page.goto(orderUrl)
+          await section
+            .getByText(/^(active|inactive|pending|draft)$/)
+            .first()
+            .waitFor({ timeout: 20_000 })
+            .catch(() => {})
+          return section.getByText("active", { exact: true }).count()
+        },
+        { timeout: 90_000, intervals: [3_000] },
+      )
+      .toBeGreaterThan(0)
+  })
 
-	test("activates a weekly subscription paid with a new Adyen card", async ({
-		page,
-	}) => {
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("activates a weekly subscription paid with a new Adyen card", async ({
+    page,
+  }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectFrequency("Every week");
-		await checkout.selectFirstShippingMethod();
-		await checkout.selectMethod("payment_setting_adyens");
-		await checkout.confirm();
-		await checkout.fillAdyenTestCard();
+    await checkout.selectFrequency("Every week")
+    await checkout.selectFirstShippingMethod()
+    await checkout.selectMethod("payment_setting_adyens")
+    await checkout.confirm()
+    await checkout.fillAdyenTestCard()
 
-		// The Drop-in asks for consent itself (CL sends askForConsent), and on a
-		// recurring order nothing on this side can tick it on the shopper's behalf.
-		// Adyen hides the native input behind a styled label, so tick it through
-		// the label and read the state back from the input.
-		const dropin = page.locator(".adyen-dropin-container");
-		await dropin.locator(".adyen-checkout__checkbox").first().click();
-		await expect(dropin.getByRole("checkbox", { name: /save/i })).toBeChecked();
-		await checkout.submitAdyen();
-		await checkout.expectPlaced();
+    // The Drop-in asks for consent itself (CL sends askForConsent), and on a
+    // recurring order nothing on this side can tick it on the shopper's behalf.
+    // Adyen hides the native input behind a styled label, so tick it through
+    // the label and read the state back from the input.
+    const dropin = page.locator(".adyen-dropin-container")
+    await dropin.locator(".adyen-checkout__checkbox").first().click()
+    await expect(dropin.getByRole("checkbox", { name: /save/i })).toBeChecked()
+    await checkout.submitAdyen()
+    await checkout.expectPlaced()
 
-		// Here the wallet comes from Adyen's RECURRING_CONTRACT webhook, which
-		// lands later than Stripe's, so allow for it.
-		const orderUrl = page.url();
-		const section = checkout.subscriptionSection();
-		await expect
-			.poll(
-				async () => {
-					await page.goto(orderUrl);
-					await section
-						.getByText(/^(active|inactive|pending|draft)$/)
-						.first()
-						.waitFor({ timeout: 20_000 })
-						.catch(() => {});
-					return section.getByText("active", { exact: true }).count();
-				},
-				{ timeout: 120_000, intervals: [5_000] },
-			)
-			.toBeGreaterThan(0);
-	});
+    // Here the wallet comes from Adyen's RECURRING_CONTRACT webhook, which
+    // lands later than Stripe's, so allow for it.
+    const orderUrl = page.url()
+    const section = checkout.subscriptionSection()
+    await expect
+      .poll(
+        async () => {
+          await page.goto(orderUrl)
+          await section
+            .getByText(/^(active|inactive|pending|draft)$/)
+            .first()
+            .waitFor({ timeout: 20_000 })
+            .catch(() => {})
+          return section.getByText("active", { exact: true }).count()
+        },
+        { timeout: 120_000, intervals: [5_000] },
+      )
+      .toBeGreaterThan(0)
+  })
 
-	test("saves a PayPal account on a one-off order when the shopper opts in", async ({
-		page,
-	}) => {
-		skipWithoutPayPalBuyer();
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("saves a PayPal account on a one-off order when the shopper opts in", async ({
+    page,
+  }) => {
+    skipWithoutPayPalBuyer()
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectMethod("payment_setting_paypals");
-		await page
-			.getByRole("checkbox", { name: "Save PayPal account for future use" })
-			.check();
-		await checkout.confirm();
-		await checkout.approveInPayPal();
-		await checkout.expectPlaced();
+    await checkout.selectMethod("payment_setting_paypals")
+    await page
+      .getByRole("checkbox", { name: "Save PayPal account for future use" })
+      .check()
+    await checkout.confirm()
+    await checkout.approveInPayPal()
+    await checkout.expectPlaced()
 
-		await expectWalletLinked(checkout);
-	});
+    await expectWalletLinked(checkout)
+  })
 
-	test("activates a weekly subscription paid with a new PayPal account", async ({
-		page,
-	}) => {
-		skipWithoutPayPalBuyer();
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("activates a weekly subscription paid with a new PayPal account", async ({
+    page,
+  }) => {
+    skipWithoutPayPalBuyer()
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectFrequency("Every week");
-		await checkout.selectFirstShippingMethod();
-		await checkout.selectMethod("payment_setting_paypals");
-		await expect(
-			page.getByText(/This PayPal account will be saved/),
-		).toBeVisible();
-		await checkout.confirm();
-		await checkout.approveInPayPal();
-		await checkout.expectPlaced();
+    await checkout.selectFrequency("Every week")
+    await checkout.selectFirstShippingMethod()
+    await checkout.selectMethod("payment_setting_paypals")
+    await expect(
+      page.getByText(/This PayPal account will be saved/),
+    ).toBeVisible()
+    await checkout.confirm()
+    await checkout.approveInPayPal()
+    await checkout.expectPlaced()
 
-		const orderUrl = page.url();
-		const section = checkout.subscriptionSection();
-		await expect
-			.poll(
-				async () => {
-					await page.goto(orderUrl);
-					await section
-						.getByText(/^(active|inactive|pending|draft)$/)
-						.first()
-						.waitFor({ timeout: 20_000 })
-						.catch(() => {});
-					return section.getByText("active", { exact: true }).count();
-				},
-				{ timeout: 90_000, intervals: [3_000] },
-			)
-			.toBeGreaterThan(0);
-	});
+    const orderUrl = page.url()
+    const section = checkout.subscriptionSection()
+    await expect
+      .poll(
+        async () => {
+          await page.goto(orderUrl)
+          await section
+            .getByText(/^(active|inactive|pending|draft)$/)
+            .first()
+            .waitFor({ timeout: 20_000 })
+            .catch(() => {})
+          return section.getByText("active", { exact: true }).count()
+        },
+        { timeout: 90_000, intervals: [3_000] },
+      )
+      .toBeGreaterThan(0)
+  })
 
-	test("pays again with a saved PayPal account", async ({ page }) => {
-		// Pays with the account the PayPal tests above saved in this run.
-		skipWithoutPayPalBuyer();
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("pays again with a saved PayPal account", async ({ page }) => {
+    // Pays with the account the PayPal tests above saved in this run.
+    skipWithoutPayPalBuyer()
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		const account = page
-			.locator("li")
-			.filter({ hasText: /paypal/i })
-			.filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
-			.first();
-		await expect(account).toBeVisible();
-		await account.getByRole("button", { name: "Pay", exact: true }).click();
-		await checkout.expectPlaced();
-	});
+    const account = page
+      .locator("li")
+      .filter({ hasText: /paypal/i })
+      .filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
+      .first()
+    await expect(account).toBeVisible()
+    await account.getByRole("button", { name: "Pay", exact: true }).click()
+    await checkout.expectPlaced()
+  })
 
-	test("pays again with a saved Stripe card", async ({ page }) => {
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("pays again with a saved Stripe card", async ({ page }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		const stripeCard = page
-			.locator("li")
-			.filter({ hasText: /stripe/i })
-			.filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
-			.first();
-		await expect(stripeCard).toBeVisible();
-		await stripeCard.getByRole("button", { name: "Pay", exact: true }).click();
-		await checkout.expectPlaced();
-	});
+    const stripeCard = page
+      .locator("li")
+      .filter({ hasText: /stripe/i })
+      .filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
+      .first()
+    await expect(stripeCard).toBeVisible()
+    await stripeCard.getByRole("button", { name: "Pay", exact: true }).click()
+    await checkout.expectPlaced()
+  })
 
-	// Braintree rejects the same card for the same amount within a short window
-	// (GATEWAY_REJECTED), and every fixture order has the same total, so these
-	// use cards no other Braintree test uses.
-	test("saves a Braintree card on a one-off order when the shopper opts in", async ({
-		page,
-	}) => {
-		// Hosted Fields and the 3-D Secure step take a good part of the default
-		// minute before the wait for the wallet even starts.
-		test.setTimeout(150_000);
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  // Braintree rejects the same card for the same amount within a short window
+  // (GATEWAY_REJECTED), and every fixture order has the same total, so these
+  // use cards no other Braintree test uses.
+  test("saves a Braintree card on a one-off order when the shopper opts in", async ({
+    page,
+  }) => {
+    // Hosted Fields and the 3-D Secure step take a good part of the default
+    // minute before the wait for the wallet even starts.
+    test.setTimeout(150_000)
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectMethod("payment_setting_braintrees");
-		await page
-			.getByRole("checkbox", { name: "Save card for future use" })
-			.check();
-		await checkout.confirm();
-		await checkout.fillBraintreeTestCard("5200000000001005");
-		await checkout.authorize();
-		await checkout.expectPlaced();
+    await checkout.selectMethod("payment_setting_braintrees")
+    await page
+      .getByRole("checkbox", { name: "Save card for future use" })
+      .check()
+    await checkout.confirm()
+    await checkout.fillBraintreeTestCard("5200000000001005")
+    await checkout.authorize()
+    await checkout.expectPlaced()
 
-		// CL links the wallet from the payment method Braintree vaulted after
-		// transacting.
-		await expectWalletLinked(checkout);
-	});
+    // CL links the wallet from the payment method Braintree vaulted after
+    // transacting.
+    await expectWalletLinked(checkout)
+  })
 
-	test("activates a weekly subscription paid with a new Braintree card", async ({
-		page,
-	}) => {
-		// Hosted Fields and the 3-D Secure step take a good part of the default
-		// minute before the wait for the wallet even starts.
-		test.setTimeout(150_000);
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
+  test("activates a weekly subscription paid with a new Braintree card", async ({
+    page,
+  }) => {
+    // Hosted Fields and the 3-D Secure step take a good part of the default
+    // minute before the wait for the wallet even starts.
+    test.setTimeout(150_000)
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
 
-		await checkout.selectFrequency("Every week");
-		await checkout.selectFirstShippingMethod();
-		await checkout.selectMethod("payment_setting_braintrees");
-		await expect(page.getByText("This card will be saved")).toBeVisible();
-		await checkout.confirm();
-		await checkout.fillBraintreeTestCard("5200000000001096");
-		await checkout.authorize();
-		await checkout.completeBraintreeChallenge();
-		await checkout.expectPlaced();
+    await checkout.selectFrequency("Every week")
+    await checkout.selectFirstShippingMethod()
+    await checkout.selectMethod("payment_setting_braintrees")
+    await expect(page.getByText("This card will be saved")).toBeVisible()
+    await checkout.confirm()
+    await checkout.fillBraintreeTestCard("5200000000001096")
+    await checkout.authorize()
+    await checkout.completeBraintreeChallenge()
+    await checkout.expectPlaced()
 
-		const orderUrl = page.url();
-		const section = checkout.subscriptionSection();
-		await expect
-			.poll(
-				async () => {
-					await page.goto(orderUrl);
-					await section
-						.getByText(/^(active|inactive|pending|draft)$/)
-						.first()
-						.waitFor({ timeout: 20_000 })
-						.catch(() => {});
-					return section.getByText("active", { exact: true }).count();
-				},
-				{ timeout: 90_000, intervals: [3_000] },
-			)
-			.toBeGreaterThan(0);
-	});
+    const orderUrl = page.url()
+    const section = checkout.subscriptionSection()
+    await expect
+      .poll(
+        async () => {
+          await page.goto(orderUrl)
+          await section
+            .getByText(/^(active|inactive|pending|draft)$/)
+            .first()
+            .waitFor({ timeout: 20_000 })
+            .catch(() => {})
+          return section.getByText("active", { exact: true }).count()
+        },
+        { timeout: 90_000, intervals: [3_000] },
+      )
+      .toBeGreaterThan(0)
+  })
 
-	test("pays again with a saved Braintree card", async ({ page }) => {
-		const checkout = new CheckoutPage(page);
-		await checkout.loginAsCustomer();
-		await checkout.create();
-		// A different total from the order that saved the card, or the duplicate
-		// check could reject the stored card.
-		await checkout.selectOtherShippingMethod();
+  test("pays again with a saved Braintree card", async ({ page }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
+    // A different total from the order that saved the card, or the duplicate
+    // check could reject the stored card.
+    await checkout.selectOtherShippingMethod()
 
-		const braintreeCard = page
-			.locator("li")
-			.filter({ hasText: /braintree/i })
-			.filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
-			.first();
-		await expect(braintreeCard).toBeVisible();
-		await braintreeCard
-			.getByRole("button", { name: "Pay", exact: true })
-			.click();
-		await checkout.expectPlaced();
-	});
-});
+    const braintreeCard = page
+      .locator("li")
+      .filter({ hasText: /braintree/i })
+      .filter({ has: page.getByRole("button", { name: "Pay", exact: true }) })
+      .first()
+    await expect(braintreeCard).toBeVisible()
+    await braintreeCard
+      .getByRole("button", { name: "Pay", exact: true })
+      .click()
+    await checkout.expectPlaced()
+  })
+})
