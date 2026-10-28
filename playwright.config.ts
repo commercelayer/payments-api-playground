@@ -1,14 +1,18 @@
+// Resolve the env once here, in the main process: the workers and the dev
+// server started by `webServer` inherit the result instead of each fetching
+// from AWS.
+import "varlock/auto-load"
 import { defineConfig, devices } from "@playwright/test"
+import { ENV } from "varlock/env"
 
-const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000"
+const BASE_URL = ENV.E2E_BASE_URL ?? "http://localhost:3000"
 
 /**
  * Playwright e2e config for the new-payments playground.
  *
  * Tests drive the real checkout UI against the sandbox org configured in
- * `.env.local` — the `webServer` below boots `next dev`, which loads `.env.local`
- * itself, so no extra env wiring is needed here. A single worker keeps shared
- * sandbox state predictable.
+ * `.env.schema` and `.env.local`. A single worker keeps shared sandbox state
+ * predictable.
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -37,5 +41,9 @@ export default defineConfig({
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // `varlock run` starts `next dev` in its own process group, so the default
+    // SIGKILL to the server's group never reaches it and leaves it holding the
+    // port. SIGTERM is forwarded by varlock and stops `next dev` too.
+    gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
   },
 })

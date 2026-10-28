@@ -41,18 +41,18 @@ your own integration.
 
 ## Reading the code
 
-| Where | What |
-|---|---|
-| `src/gateways/stripe/` | Stripe card payment, the Amazon Pay redirect return, stored-card reuse, express checkout |
-| `src/gateways/adyen/` | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout |
-| `src/gateways/braintree/` | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser |
-| `src/gateways/paypal/` | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
-| `src/gateways/checkout-com/` | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page |
-| `src/gateways/mollie/` | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`) |
-| `src/gateways/manual/` | Manual payment: session and authorization in one step |
-| `src/gateways/types.ts` | The contract between the checkout and a gateway module |
-| `src/components/payment-section.tsx` | What every gateway shares: gift cards, the balance, stored cards, redirect returns, placing the order |
-| `CONTEXT.md` | The domain vocabulary (payment setting, payment session, payment wallet, …) |
+| Where                                | What                                                                                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/gateways/stripe/`               | Stripe card payment, the Amazon Pay redirect return, stored-card reuse, express checkout                                      |
+| `src/gateways/adyen/`                | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout                   |
+| `src/gateways/braintree/`            | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser                                                           |
+| `src/gateways/paypal/`               | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
+| `src/gateways/checkout-com/`         | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page                             |
+| `src/gateways/mollie/`               | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`)                      |
+| `src/gateways/manual/`               | Manual payment: session and authorization in one step                                                                         |
+| `src/gateways/types.ts`              | The contract between the checkout and a gateway module                                                                        |
+| `src/components/payment-section.tsx` | What every gateway shares: gift cards, the balance, stored cards, redirect returns, placing the order                         |
+| `CONTEXT.md`                         | The domain vocabulary (payment setting, payment session, payment wallet, …)                                                   |
 
 Each gateway's main file opens with a comment that walks through its flow step
 by step.
@@ -111,7 +111,7 @@ Then:
 
 1. In the dashboard, create the payment settings you want to try and add them
    to the market you will use.
-2. Fill in `.env.local` as described below: the sales channel's client ID in
+2. Set the env as described below: the sales channel's client ID in
    `CL_CLIENT_ID`, the same integration credentials you logged in with in
    `CL_INTEGRATION_CLIENT_ID` / `CL_INTEGRATION_CLIENT_SECRET`, and the code of
    that market in `CL_MARKET_CODE`.
@@ -120,22 +120,46 @@ Then:
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # then fill it in
-pnpm dev                           # http://localhost:3000
+pnpm dev     # http://localhost:3000
 ```
 
-`.env.local.example` documents every variable, grouped by feature. In short:
+The env is managed by [varlock](https://varlock.dev). `.env.schema` documents
+every variable, grouped by feature, and `pnpm dev` and the e2e tests load it.
+`next build` and `next start` don't: a deploy reads the process environment as
+usual.
 
-| Group | Variables | Without them |
-|---|---|---|
-| Required | `CL_CLIENT_ID`, `CL_MARKET_CODE` | The app doesn't start |
-| Organization domain | `CL_DOMAIN` | The default Commerce Layer domain |
-| Store page | `CL_SKU_CODE`, `CL_ADDRESS_COUNTRY_CODE`, `CL_CUSTOMER_EMAIL`, `CL_CUSTOMER_PASSWORD` | The first priced SKU, a US address, no customer login |
-| Integration application | `CL_INTEGRATION_CLIENT_ID`, `CL_INTEGRATION_CLIENT_SECRET` | No express buttons, no debug panels, Adyen's advanced flow fails. The store page says so |
-| Debug panels | `CL_DEBUG_PANELS` | Panels off in a production build (always on in `pnpm dev`) |
-| Adyen express | `CL_APPLE_PAY_MERCHANT_ID`, `CL_APPLE_PAY_MERCHANT_NAME`, `CL_EXPRESS_COUNTRY_CODE` | No Adyen Apple Pay button |
-| Mollie | `MOLLIE_API_KEY`, `GATEWAY_SHARED_SECRET`, `CL_WEBHOOK_ENDPOINT_URL`, `APP_URL` | Mollie payments don't work |
-| Debugging | `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, `DEV_TUNNEL_HOST` | No request logging, no tunnel |
+Create a `.env.local` with the values you need. `.env.schema` lists and
+describes every variable: take the names from there, with your own values. For
+example:
+
+```bash
+CL_CLIENT_ID=<sales channel client ID>
+CL_MARKET_CODE=<market code>
+CL_INTEGRATION_CLIENT_ID=<integration client ID>
+CL_INTEGRATION_CLIENT_SECRET=<integration client secret>
+```
+
+`.env.local` is git-ignored and takes precedence over `.env.schema`.
+
+**Commerce Layer team:** the sandbox values are kept in the Parameter Store
+parameter `/dev/payments-api-playground` (eu-west-1). Put just
+`LOAD_FROM_AWS=true` in `.env.local` and log in (`aws sso login`): every
+variable you don't set in `.env.local` is then read from there. Keep your own
+settings (`DEV_TUNNEL_HOST`, `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, ...) in
+`.env.local`, next to the switch.
+
+In short:
+
+| Group                   | Variables                                                                             | Without them                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Required                | `CL_CLIENT_ID`, `CL_MARKET_CODE`                                                      | The app doesn't start                                                                    |
+| Organization domain     | `CL_DOMAIN`                                                                           | The default Commerce Layer domain                                                        |
+| Store page              | `CL_SKU_CODE`, `CL_ADDRESS_COUNTRY_CODE`, `CL_CUSTOMER_EMAIL`, `CL_CUSTOMER_PASSWORD` | The first priced SKU, a US address, no customer login                                    |
+| Integration application | `CL_INTEGRATION_CLIENT_ID`, `CL_INTEGRATION_CLIENT_SECRET`                            | No express buttons, no debug panels, Adyen's advanced flow fails. The store page says so |
+| Debug panels            | `CL_DEBUG_PANELS`                                                                     | Panels off in a production build (always on in `pnpm dev`)                               |
+| Adyen express           | `CL_APPLE_PAY_MERCHANT_ID`, `CL_APPLE_PAY_MERCHANT_NAME`, `CL_EXPRESS_COUNTRY_CODE`   | No Adyen Apple Pay button                                                                |
+| Mollie                  | `MOLLIE_API_KEY`, `GATEWAY_SHARED_SECRET`, `CL_WEBHOOK_ENDPOINT_URL`, `APP_URL`       | Mollie payments don't work                                                               |
+| Debugging               | `NEXT_PUBLIC_CL_DEBUG_REQUESTS`, `DEV_TUNNEL_HOST`                                    | No request logging, no tunnel                                                            |
 
 Apple Pay and Google Pay only show up on a browser and device that support
 them, and Apple Pay needs a domain verified with Apple, so express payments

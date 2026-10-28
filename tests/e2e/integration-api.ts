@@ -1,16 +1,10 @@
 import { authenticate } from "@commercelayer/js-auth"
 import { CommerceLayer } from "@commercelayer/sdk"
-
-// The specs run outside Next, so `.env.local` is not loaded for them — only the
-// `next dev` web server reads it. Missing is fine when the variables are
-// already in the environment.
-try {
-  process.loadEnvFile(".env.local")
-} catch {}
+import { ENV } from "varlock/env"
 
 async function integrationClient() {
-  const clientId = process.env.CL_INTEGRATION_CLIENT_ID
-  const clientSecret = process.env.CL_INTEGRATION_CLIENT_SECRET
+  const clientId = ENV.CL_INTEGRATION_CLIENT_ID
+  const clientSecret = ENV.CL_INTEGRATION_CLIENT_SECRET
   if (!clientId || !clientSecret) {
     throw new Error(
       "Missing CL_INTEGRATION_CLIENT_ID / CL_INTEGRATION_CLIENT_SECRET",
@@ -19,7 +13,7 @@ async function integrationClient() {
   const auth = await authenticate("client_credentials", {
     clientId,
     clientSecret,
-    domain: process.env.CL_DOMAIN,
+    domain: ENV.CL_DOMAIN,
   })
   return CommerceLayer({
     accessToken: auth.accessToken,
@@ -77,7 +71,7 @@ export async function cancelCustomerDataSince(since: Date): Promise<{
   wallets: number
   failed: string[]
 }> {
-  const email = process.env.CL_CUSTOMER_EMAIL
+  const email = ENV.CL_CUSTOMER_EMAIL
   if (!email) throw new Error("Missing CL_CUSTOMER_EMAIL")
   const client = await integrationClient()
   const [customer] = await client.customers.list({

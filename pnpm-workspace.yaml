@@ -1,4 +1,4 @@
 allowBuilds:
   sharp: true
 minimumReleaseAgeExclude:
-  - '@commercelayer/sdk'
+  - "@commercelayer/sdk"

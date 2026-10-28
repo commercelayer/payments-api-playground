@@ -1,3 +1,4 @@
+import { ENV } from "varlock/env"
 import { cancelCustomerDataSince } from "./integration-api"
 
 /**
@@ -13,7 +14,7 @@ import { cancelCustomerDataSince } from "./integration-api"
 export default async function globalSetup() {
   const startedAt = new Date()
   return async () => {
-    if (process.env.E2E_KEEP_DATA) return
+    if (ENV.E2E_KEEP_DATA) return
     const { subscriptions, wallets, failed } =
       await cancelCustomerDataSince(startedAt)
     console.log(

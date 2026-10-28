@@ -1,3 +1,4 @@
+import { ENV } from "varlock/env"
 import { CheckoutPage } from "./checkout-page"
 import { expect, test } from "./fixtures"
 import { fetchOrderWalletId } from "./integration-api"
@@ -32,7 +33,7 @@ async function expectWalletLinked(checkout: CheckoutPage): Promise<void> {
 /** The PayPal tests log in to PayPal's sandbox as a buyer in a popup. */
 function skipWithoutPayPalBuyer(): void {
   test.skip(
-    !process.env.E2E_PAYPAL_EMAIL || !process.env.E2E_PAYPAL_PASSWORD,
+    !ENV.E2E_PAYPAL_EMAIL || !ENV.E2E_PAYPAL_PASSWORD,
     "E2E_PAYPAL_EMAIL / E2E_PAYPAL_PASSWORD not set",
   )
   test.setTimeout(150_000)

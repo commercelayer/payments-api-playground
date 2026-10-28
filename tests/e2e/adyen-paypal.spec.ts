@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test"
+import { ENV } from "varlock/env"
 import { expect, test } from "./fixtures"
 
 /**
@@ -11,11 +12,10 @@ import { expect, test } from "./fixtures"
  * not the redirect return.
  *
  * Needs a PayPal sandbox buyer account linked to the Adyen test merchant, in
- * `E2E_PAYPAL_EMAIL` / `E2E_PAYPAL_PASSWORD` (`.env.local` is loaded for the
- * specs by `integration-api.ts`, through the page object).
+ * `E2E_PAYPAL_EMAIL` / `E2E_PAYPAL_PASSWORD`.
  */
-const email = process.env.E2E_PAYPAL_EMAIL
-const password = process.env.E2E_PAYPAL_PASSWORD
+const email = ENV.E2E_PAYPAL_EMAIL
+const password = ENV.E2E_PAYPAL_PASSWORD
 
 test("pays with PayPal through the Adyen Drop-in", async ({
   checkout,
