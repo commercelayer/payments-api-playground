@@ -148,8 +148,11 @@ export class CheckoutPage {
   }
 
   /**
-   * Pick the first unselected shipping method. Needed after any line item write,
-   * which rebuilds the shipments and clears the method already chosen.
+   * Pick the first shipping method on every shipment that has none. Needed
+   * after a line item write that rebuilds the shipments and clears the method
+   * already chosen. A shipment that kept its method is left alone: switching it
+   * would re-price the order after the waits below have already passed on the
+   * old total.
    *
    * Waits for the shipping cost to be back in the totals before returning. The
    * amount field is auto-filled from the remaining balance when a payment method
@@ -162,13 +165,15 @@ export class CheckoutPage {
     const radios = this.page.locator('input[name^="shipping_method_"]')
     // The shipment list is briefly empty while the order refreshes.
     await expect(radios.first()).toBeVisible()
-    const count = await radios.count()
-    for (let i = 0; i < count; i++) {
-      const radio = radios.nth(i)
-      if (!(await radio.isChecked())) {
-        await radio.check()
-        break
-      }
+    const names = new Set(
+      await radios.evaluateAll((inputs) =>
+        inputs.map((input) => input.getAttribute("name") ?? ""),
+      ),
+    )
+    for (const name of names) {
+      const options = this.page.locator(`input[name="${name}"]`)
+      const checked = this.page.locator(`input[name="${name}"]:checked`)
+      if ((await checked.count()) === 0) await options.first().check()
     }
     await expect
       .poll(async () => await this.shippingAmountCents())
