@@ -200,8 +200,8 @@ export function PaymentSection({
 	const adyenReturnParams = adyenReturn(searchParams);
 	const isAdyenRedirectReturn = adyenReturnParams != null;
 	const isMollieRedirectReturn = isMollieReturn(searchParams);
-	const checkoutComOutcome = checkoutComReturn(searchParams);
-	const isCheckoutComRedirectReturn = checkoutComOutcome != null;
+	const checkoutComReturnParams = checkoutComReturn(searchParams);
+	const isCheckoutComRedirectReturn = checkoutComReturnParams != null;
 
 	const client = useMemo(() => createClient(accessToken), [accessToken]);
 
@@ -413,13 +413,13 @@ export function PaymentSection({
 	// ── Checkout.com redirect-return recovery (3-D Secure) ───────────────────
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs once on mount when redirect params are present
 	useEffect(() => {
-		if (!checkoutComOutcome || redirectHandledRef.current) return;
+		if (!checkoutComReturnParams || redirectHandledRef.current) return;
 		redirectHandledRef.current = true;
 		completeRedirectReturn(async () => {
 			await resumeCheckoutComRedirect({
 				client,
 				paymentSessions,
-				outcome: checkoutComOutcome,
+				...checkoutComReturnParams,
 				authorizeGiftCards,
 			});
 			return "authorized";

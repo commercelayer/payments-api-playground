@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
  * Flow renders the methods the account offers (card, and Apple Pay / Google
  * Pay where the browser supports them) with its own pay button, submits the
  * payment to Checkout.com and shows a decline itself. `onCompleted` fires only
- * once a payment is approved.
+ * once a payment is approved, with its Checkout.com payment id.
  */
 export function CheckoutComFlowStep({
 	pendingSession,
@@ -25,7 +25,7 @@ export function CheckoutComFlowStep({
 	pendingSession: PaymentSession;
 	publicKey: string;
 	authorizeError: string | null;
-	onCompleted: () => void;
+	onCompleted: (paymentId: string) => void;
 	onError: (message: string) => void;
 	onReset: () => void;
 }) {
@@ -62,7 +62,8 @@ export function CheckoutComFlowStep({
 				});
 				if (cancelled) return;
 				const flow = checkout.create("flow", {
-					onPaymentCompleted: () => callbacksRef.current.onCompleted(),
+					onPaymentCompleted: (_component, payment) =>
+						callbacksRef.current.onCompleted(payment.id),
 					onError: (_component, error: CheckoutError) =>
 						callbacksRef.current.onError(error.message),
 				});

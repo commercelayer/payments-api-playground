@@ -26,17 +26,19 @@ Notes for whoever picks this up:
   `response_data` is the Checkout.com payment session (`id`,
   `payment_session_secret`, `payment_session_token`), and Flow mounts on it as
   is, with the setting's `public_key`.
-- **Authorization:** Flow submits the payment itself. Only once it is
-  approved is the payment_authorization created. It sends nothing to
-  Checkout.com: CL fills its `response_data` with the Checkout.com payment,
-  `3ds` block included, within a couple of seconds. Flow's `handleSubmit`
-  route (its `session_data` in `client_data`) is not the way: the
-  authorization never settles.
+- **Authorization:** Flow submits the payment itself. Once it is approved,
+  its payment id (`pay_…`) goes into `client_data.payment_method` and the
+  payment_authorization is created. CL reads that payment from Checkout.com
+  instead of submitting a new one, and copies it, `3ds` block included, into
+  the authorization's `response_data`. Flow's `handleSubmit` route (its
+  `session_data` in `client_data`) is not the way: the authorization never
+  settles.
 - **3-D Secure return:** after a challenge Flow doesn't call
   `onPaymentCompleted`. Checkout.com sends the shopper back to `success_url`
   and appends `cko-payment-session-id`, `cko-session-id` and `cko-payment-id`
-  to our own `checkout_com_return` parameter. The order page then creates the
-  authorization and removes all four parameters from the URL.
+  to our own `checkout_com_return` parameter. The order page then authorizes
+  the session with the payment id from `cko-payment-id` and removes all four
+  parameters from the URL.
 
 ## What is missing
 

@@ -3,7 +3,8 @@
 import type { PaymentSettingCheckoutCom } from "@commercelayer/sdk";
 import { useState } from "react";
 import type { GatewayPaymentProps } from "@/gateways/types";
-import { errorMessage, pollAuthorization } from "@/lib/payments";
+import { errorMessage } from "@/lib/payments";
+import { authorizeCheckoutComPayment } from "./authorization";
 import { CheckoutComFlowStep } from "./flow-step";
 
 /**
@@ -15,11 +16,12 @@ import { CheckoutComFlowStep } from "./flow-step";
  *    Checkout.com payment session and returns it in `response_data`.
  * 2. Flow mounts on that payment session, collects the payment details and
  *    submits the payment to Checkout.com itself, with its own pay button.
- * 3. Once Checkout.com approves it, the CL payment_authorization is created.
- *    It sends nothing to Checkout.com: CL picks up the payment Flow made for
- *    this session and copies it into the authorization's `response_data`.
- *    That happens asynchronously, so the authorization is polled until it
- *    settles.
+ * 3. Once Checkout.com approves it, its payment id goes into the session's
+ *    `client_data.payment_method` and the CL payment_authorization is
+ *    created. It submits nothing: CL reads that payment from Checkout.com and
+ *    copies it into the authorization's `response_data`
+ *    (`authorization.ts`). After a 3-D Secure challenge the same happens on
+ *    the order page (`redirect-return.ts`).
  *
  * Flow's `handleSubmit` route, its `session_data` token in `client_data`, is
  * not the way: the authorization never settles.
@@ -70,20 +72,16 @@ export function CheckoutComPayment({
 
 	/** Called once Flow has submitted the payment and Checkout.com approved
 	 * it. */
-	async function handleCompleted() {
+	async function handleCompleted(paymentId: string) {
 		if (!session) return;
 		setAuthorizeError(null);
 		try {
-			await authorizeGiftCards();
-			const created = await client.payment_authorizations.create({
-				payment_session: client.payment_sessions.relationship(session.id),
+			await authorizeCheckoutComPayment({
+				client,
+				session,
+				paymentId,
+				authorizeGiftCards,
 			});
-			const auth = await pollAuthorization(client, created.id);
-			if (auth.status !== "succeeded") {
-				throw new Error(
-					`The payment was not authorized (authorization ${auth.status}).`,
-				);
-			}
 			onAuthorized();
 		} catch (e) {
 			setAuthorizeError(errorMessage(e, "Payment authorization failed."));
