@@ -114,12 +114,15 @@ export function derivePaymentState(
   // session) so the customer can resume or retry, rather than starting from
   // scratch — but only if it (together with any applied gift cards) covers the
   // full order amount. A leftover session for a smaller, stale amount is not
-  // restored.
+  // restored. Neither is one created for a saved card: it stays bound to that
+  // card's payment_wallet, and CL keeps paying from it (on Checkout.com a new
+  // card entered in Flow on such a session charges the saved card instead).
   const restoredMethodSession =
     openMethodSessions.find(
       (s) =>
+        s.payment_wallet == null &&
         (s.amount_cents ?? 0) + activeGiftCardAmountCents >=
-        orderTotalAmountCents,
+          orderTotalAmountCents,
     ) ?? null
 
   // How much of the order is already spoken for. Gift cards count at face

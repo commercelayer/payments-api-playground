@@ -6,6 +6,7 @@ import type { GatewayPaymentProps } from "@/gateways/types"
 import { errorMessage } from "@/lib/payments"
 import { authorizeCheckoutComPayment } from "./authorization"
 import { CheckoutComFlowStep } from "./flow-step"
+import { checkoutComReturnUrls } from "./redirect-return"
 
 /**
  * Card and wallet payment with Checkout.com Flow, from the shopper's choice to
@@ -27,14 +28,20 @@ import { CheckoutComFlowStep } from "./flow-step"
  * Flow's `handleSubmit` route, its `session_data` token in `client_data`, is
  * not the way: the authorization never settles.
  *
- * Cards aren't stored yet, so on an order that will mint a subscription the
- * method says so instead of offering Confirm.
+ * To store the card, the session is created with `vaulting: true`. CL then
+ * creates the Checkout.com payment session with card storage enabled, under
+ * the customer's Checkout.com customer when there is one, and Flow asks no
+ * consent of its own: it is asked here, as for Stripe. The approved payment
+ * carries a reusable source, and the authorization links the payment_wallet
+ * from it. A guest session never vaults, because a wallet needs a customer to
+ * belong to.
  */
 export function CheckoutComPayment({
   client,
   orderId,
   setting,
   amountCents,
+  customerId,
   mustSaveCard,
   session,
   onSessionChange,
@@ -42,18 +49,11 @@ export function CheckoutComPayment({
   onAuthorized,
   onCancel,
 }: GatewayPaymentProps) {
+  const [saveToWallet, setSaveToWallet] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [authorizeError, setAuthorizeError] = useState<string | null>(null)
   const { public_key: publicKey } = setting as PaymentSettingCheckoutCom
-
-  function returnUrls() {
-    const orderUrl = `${window.location.origin}/orders/${orderId}`
-    return {
-      success_url: `${orderUrl}?checkout_com_return=success`,
-      failure_url: `${orderUrl}?checkout_com_return=failure`,
-    }
-  }
 
   async function handleConfirm() {
     if (amountCents == null) return
@@ -63,7 +63,8 @@ export function CheckoutComPayment({
       onSessionChange(
         await client.payment_sessions.create({
           amount_cents: amountCents,
-          client_data: returnUrls(),
+          vaulting: !!customerId && (saveToWallet || mustSaveCard),
+          client_data: checkoutComReturnUrls(orderId),
           payment_setting: client.payment_settings.relationship(setting.id),
           order: client.orders.relationship(orderId),
         }),
@@ -93,18 +94,27 @@ export function CheckoutComPayment({
     }
   }
 
-  if (!session && mustSaveCard) {
-    return (
-      <p className="mt-2 text-xs text-gray-500">
-        Checkout.com can't save cards here yet, and the subscription needs one
-        to charge the orders after this one. Pay with another method.
-      </p>
-    )
-  }
-
   if (!session) {
     return (
       <div className="mt-2 flex flex-col gap-2">
+        {customerId &&
+          (mustSaveCard ? (
+            <p className="text-xs text-gray-500">
+              This card will be saved — the subscription needs it to charge the
+              orders after this one.
+            </p>
+          ) : (
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+              <input
+                type="checkbox"
+                checked={saveToWallet}
+                onChange={(e) => setSaveToWallet(e.target.checked)}
+                disabled={confirming}
+                className="accent-gray-900"
+              />
+              Save card for future use
+            </label>
+          ))}
         <button
           type="button"
           onClick={handleConfirm}
