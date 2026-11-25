@@ -59,6 +59,7 @@ export function OrderDetail({ orderId, accessToken }: Props) {
       "payment_sessions.payment_authorization.payment_void",
       "payment_sessions.payment_captures",
       "payment_sessions.payment_refunds",
+      "payment_sessions.payment_wallet",
       "order_subscriptions",
       "order_subscriptions.payment_setting",
       "order_subscriptions.payment_wallet",

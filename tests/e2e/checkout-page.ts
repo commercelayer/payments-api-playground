@@ -703,9 +703,13 @@ export class CheckoutPage {
     await this.fillCheckoutComField("card-cvv", "100")
   }
 
-  /** Submit Flow (its own "Pay" button sends the payment to Checkout.com). */
+  /** Submit Flow (its own "Pay" button sends the payment to Checkout.com).
+   * Scoped to Flow: a logged-in customer's saved cards have Pay buttons too. */
   async submitCheckoutCom(): Promise<void> {
-    await this.page.getByRole("button", { name: "Pay", exact: true }).click()
+    await this.page
+      .getByTestId("checkout-com-flow")
+      .getByRole("button", { name: "Pay", exact: true })
+      .click()
   }
 
   /**

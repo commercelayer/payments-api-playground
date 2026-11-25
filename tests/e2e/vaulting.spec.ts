@@ -308,6 +308,78 @@ test.describe("vaulting", () => {
       .toBeGreaterThan(0)
   })
 
+  test("saves a Checkout.com card on a one-off order when the shopper opts in", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
+
+    await checkout.selectMethod("payment_setting_checkout_coms")
+    await page
+      .getByRole("checkbox", { name: "Save card for future use" })
+      .check()
+    await checkout.confirm()
+    await checkout.fillCheckoutComTestCard("4485040371536584")
+    await checkout.submitCheckoutCom()
+    await checkout.expectPlaced()
+
+    // CL links the wallet from the reusable source on the payment Flow
+    // submitted.
+    await expectWalletLinked(checkout)
+  })
+
+  test("activates a weekly subscription paid with a new Checkout.com card", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000)
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
+
+    await checkout.selectFrequency("Every week")
+    await checkout.selectFirstShippingMethod()
+    await checkout.selectMethod("payment_setting_checkout_coms")
+    await expect(page.getByText("This card will be saved")).toBeVisible()
+    await checkout.confirm()
+    await checkout.fillCheckoutComTestCard()
+    await checkout.submitCheckoutCom()
+    await checkout.completeCheckoutComChallenge()
+    await checkout.expectPlaced()
+
+    const orderUrl = page.url()
+    const section = checkout.subscriptionSection()
+    await expect
+      .poll(
+        async () => {
+          await page.goto(orderUrl)
+          await section
+            .getByText(/^(active|inactive|pending|draft)$/)
+            .first()
+            .waitFor({ timeout: 20_000 })
+            .catch(() => {})
+          return section.getByText("active", { exact: true }).count()
+        },
+        { timeout: 90_000, intervals: [3_000] },
+      )
+      .toBeGreaterThan(0)
+  })
+
+  test("pays again with a saved Checkout.com card", async ({ page }) => {
+    // The frictionless card the opt-in test above saved in this run.
+    // Checkout.com still sends the shopper to its 3-D Secure page, which
+    // authenticates without a challenge and comes straight back.
+    const checkout = new CheckoutPage(page)
+    await checkout.loginAsCustomer()
+    await checkout.create()
+
+    const card = checkout.savedCardRow(/checkout\.com/i, "6584")
+    await expect(card).toBeVisible()
+    await card.getByRole("button", { name: "Pay", exact: true }).click()
+    await checkout.expectPlaced()
+  })
+
   test("pays again with a saved Braintree card", async ({ page }) => {
     const checkout = new CheckoutPage(page)
     await checkout.loginAsCustomer()

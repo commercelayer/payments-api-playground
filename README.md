@@ -31,7 +31,8 @@ your own integration.
   placed when nothing is left to pay.
 - **Gift cards:** apply one or more before choosing a method.
 - **Stored cards:** a logged-in customer can save a card while paying (Stripe,
-  Adyen, Braintree), or a PayPal account, and pay with it on the next order.
+  Adyen, Braintree, Checkout.com), or a PayPal account, and pay with it on the
+  next order.
 - **Subscriptions:** pick a frequency on the order, pay with a card that gets
   stored, and manage the subscription Commerce Layer creates.
 - **Redirects and 3-D Secure:** Amazon Pay through Stripe, Klarna through
@@ -47,7 +48,7 @@ your own integration.
 | `src/gateways/adyen/`                | Adyen Drop-in and advanced-flow card, stored cards with CVC, 3-D Secure, redirect returns, express checkout                   |
 | `src/gateways/braintree/`            | Braintree Hosted Fields and Drop-in, with 3-D Secure in the browser                                                           |
 | `src/gateways/paypal/`               | PayPal checkout with the JS SDK v6 button, on the PayPal order Commerce Layer creates for the session; stored PayPal accounts |
-| `src/gateways/checkout-com/`         | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page                             |
+| `src/gateways/checkout-com/`         | Checkout.com Flow card payment, with 3-D Secure inside Flow or through a return to the order page; stored cards               |
 | `src/gateways/mollie/`               | Mollie through an external payment setting, including the server routes Commerce Layer calls (`server/`)                      |
 | `src/gateways/manual/`               | Manual payment: session and authorization in one step                                                                         |
 | `src/gateways/types.ts`              | The contract between the checkout and a gateway module                                                                        |
@@ -204,8 +205,9 @@ On a Checkout.com account with processing channels, payment sessions are refused
 with `processing_channel_id_required` until the account has a default
 processing channel.
 
-Checkout.com doesn't store cards yet, so it isn't offered on an order that
-creates a subscription.
+Paying with a stored card runs 3-D Secure on Checkout.com's own page, even when
+the issuer lets the card through without a challenge, so the shopper always
+leaves the checkout and comes back to the order page.
 
 ## Why not a public deploy
 

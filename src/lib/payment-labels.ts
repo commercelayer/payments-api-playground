@@ -43,6 +43,7 @@ function fmtExp(month: unknown, year: unknown): string {
  *  - Adyen (event):  `{ paymentMethod, additionalData: { cardSummary, expiryDate: "MM/YYYY" } }`
  *  - Adyen (stored): `{ brand, lastFour, expiryMonth, expiryYear }`
  *  - Braintree: `{ details_type, brand_code, last4, expiration_month, expiration_year }`
+ *  - Checkout.com: the payment's source, `{ type: "card", scheme, last4, expiry_month, expiry_year }`
  */
 export function cardDisplay(wallet: PaymentWallet): {
   brand: string
@@ -58,6 +59,15 @@ export function cardDisplay(wallet: PaymentWallet): {
       brand: String(pd.brand_code ?? "").toUpperCase(),
       last4: String(pd.last4 ?? ""),
       exp: fmtExp(pd.expiration_month, pd.expiration_year),
+    }
+  }
+
+  // Checkout.com
+  if (pd.type === "card" && pd.scheme) {
+    return {
+      brand: String(pd.scheme).toUpperCase(),
+      last4: String(pd.last4 ?? ""),
+      exp: fmtExp(pd.expiry_month, pd.expiry_year),
     }
   }
 

@@ -15,6 +15,11 @@ function gatewayBadge(type: string | undefined): {
       return { label: "Braintree", className: "bg-sky-100 text-sky-700" }
     case "payment_setting_paypals":
       return { label: "PayPal", className: "bg-blue-100 text-blue-700" }
+    case "payment_setting_checkout_coms":
+      return {
+        label: "Checkout.com",
+        className: "bg-violet-100 text-violet-700",
+      }
     default:
       return null
   }

@@ -68,6 +68,7 @@ import { AdyenThreeDSAction } from "@/gateways/adyen/three-ds-action"
 import { BraintreePayment } from "@/gateways/braintree/braintree-payment"
 import { payWithBraintreeWallet } from "@/gateways/braintree/pay-with-wallet"
 import { CheckoutComPayment } from "@/gateways/checkout-com/checkout-com-payment"
+import { payWithCheckoutComWallet } from "@/gateways/checkout-com/pay-with-wallet"
 import {
   CHECKOUT_COM_RETURN_PARAMS,
   checkoutComReturn,
@@ -96,6 +97,7 @@ import { derivePaymentState } from "@/lib/payment-state"
 import {
   authorizeAppliedGiftCards,
   cascadeDeleteSession,
+  errorMessage,
   pollAndPlace,
   refundCapturedGiftCards,
   refundGiftCardSession,
@@ -505,6 +507,13 @@ export function PaymentSection({
     if (setting?.type === "payment_setting_braintrees") {
       return handlePayWithStoredWallet(wallet, setting, payWithBraintreeWallet)
     }
+    if (setting?.type === "payment_setting_checkout_coms") {
+      return handlePayWithStoredWallet(
+        wallet,
+        setting,
+        payWithCheckoutComWallet,
+      )
+    }
     return handlePayWithWalletStripe(
       wallet,
       setting as PaymentSettingStripe | undefined,
@@ -522,7 +531,7 @@ export function PaymentSection({
       await client.payment_wallets.update({ id: wallet.id, _cancel: true })
       setPaymentWallets((prev) => prev.filter((w) => w.id !== wallet.id))
     } catch (e) {
-      setWalletError(e instanceof Error ? e.message : "Could not remove card.")
+      setWalletError(errorMessage(e, "Could not remove card."))
     } finally {
       setDeletingWalletId(null)
     }
@@ -547,18 +556,21 @@ export function PaymentSection({
       autoPlaceRef.current = true
       onGiftCardApplied() // silent order refresh
     } catch (e) {
-      setWalletError(e instanceof Error ? e.message : "Payment failed.")
+      setWalletError(errorMessage(e, "Payment failed."))
     } finally {
       setPayingWithWalletId(null)
     }
   }
 
-  /** Reuse a saved Braintree card or PayPal account: CL pays from the stored
-   * wallet alone, so no gateway widget is mounted here. */
+  /** Reuse a saved Braintree or Checkout.com card, or a PayPal account: CL
+   * pays from the stored wallet alone, so no gateway widget is mounted here. */
   async function handlePayWithStoredWallet(
     wallet: PaymentWallet,
     paymentSetting: PaymentSetting,
-    pay: typeof payWithBraintreeWallet | typeof payWithPayPalWallet,
+    pay:
+      | typeof payWithBraintreeWallet
+      | typeof payWithCheckoutComWallet
+      | typeof payWithPayPalWallet,
   ) {
     setPayingWithWalletId(wallet.id)
     setWalletError(null)
@@ -574,7 +586,7 @@ export function PaymentSection({
       autoPlaceRef.current = true
       onGiftCardApplied() // silent order refresh
     } catch (e) {
-      setWalletError(e instanceof Error ? e.message : "Payment failed.")
+      setWalletError(errorMessage(e, "Payment failed."))
     } finally {
       setPayingWithWalletId(null)
     }
